@@ -111,7 +111,6 @@ function drawColumn(select) {
 		.attr("class","column")
 		.attr("index", index)
 		.attr("radius", radius);
-	// TODO: make first scale only with first point, draw axis if scale changed
 	var scale = getScale(index); // TODO: initial scale, change if needed
 	// make axis
 	var axis = d3.svg.axis()

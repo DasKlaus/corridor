@@ -22,3 +22,5 @@ path.domain {}
   shape-rendering: crispEdges;
   stroke: #000;
 }
+
+.cell.hover {fill: #66d;}

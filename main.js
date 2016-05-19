@@ -43,8 +43,12 @@ function drawColumn(select) {
 	// TODO: split into functions
 	var index = select.value;
 	select.value = "none"; // reset select
-	if (d3.select(".column.index"+index).size()>0) return; // return if column already drawn
-	var svg = d3.select("body").append("svg").attr("width",columnWidth).attr("height",columnHeight).attr("class","column index"+index); // TODO: write index in a different attribute
+	var radius = 3; // starting radius
+	if (d3.select(".column[index='"+index+"']").size()>0) return; // return if column already drawn
+	var svg = d3.select("body").append("svg").attr("width",columnWidth).attr("height",columnHeight)
+		.attr("class","column")
+		.attr("index", index)
+		.attr("radius", radius);
 	var scale = getScale(index);
 	// make axis
 	var axis = d3.svg.axis()
@@ -57,7 +61,7 @@ function drawColumn(select) {
 	// TODO: call append on requestAnimationFrame for large data
 	// TODO: implement arrays - drawing more than one circle per dataset
 	svg.selectAll("cell").data(data).enter().append("circle")
-		.attr("r",3) // TODO: make dependent data density
+		.attr("r",radius) // TODO: make dependent on data density (define beforehand, change when needed)
 		.attr("cy", function(d) {return Math.round(scale(d[index]));})
 		.attr("cx", function(d) {
 			// approximate distribution of cells over x axis
@@ -65,14 +69,51 @@ function drawColumn(select) {
 			var y = Math.round(scale(d[index]));
 			// get all cells that are already placed around the same y value
 			var same = svg.selectAll("circle[cx]").filter(function(d) {
-					return Math.abs(Math.round(scale(d[index])-y))<4;
+					return Math.abs(Math.round(scale(d[index])-y))<radius*2+1;
 				});
 			var side = (same.size()%2)*2-1;
-			return (columnWidth-50)/2 +50 + 7 * Math.ceil(same.size()/2) * side; // TODO: except if too wide! What then? make smaller circles bzw. less alpha
-			// TODO: title attribute, hover
+			return (columnWidth-50)/2 +50 + (radius*2+1) * Math.ceil(same.size()/2) * side; // TODO: except if too wide! What then? make smaller circles bzw. less alpha
+		})
+		.attr("class", "cell")
+		.attr("value", function(d) {return d[index];})
+		.attr("cellid", function(d) {
+			// output the first column of type id as id
+			for (var i=0;i<dataStructure.length;i++) {
+				if (dataStructure[i].type=="id") return d[i];
+			}
+		})
+		.attr("title", function(d) {
+			// output all columns of type id and also value as tooltip
+			// TODO: title tag doesn't seem to work on svg elements
+			var title = new Array();			
+			for (var i=0;i<dataStructure.length;i++) {
+				if (dataStructure[i].type=="id") title.push(d[i]);
+			}
+			title.push(d[index]);
+			if (dataStructure[index].unit) {title[title.length-1] += " "+dataStructure[index].unit;} // append unit, if set
+			return title.join(", ");
+		})
+		// on hover set css class for all cells with the same cell id
+		// TODO: don't do this in css, because no color management in css. Also: enlargen circles?
+		.on("mouseover", function(d) {
+
+			var cellid = "";
+			for (var i=0;i<dataStructure.length;i++) {
+				if (dataStructure[i].type=="id") cellid = d[i];
+			}
+			d3.selectAll(".cell[cellid='"+cellid+"']").attr("class", "cell hover").attr("r",5);
+		})
+		.on("mouseout", function(d) {
+			var cellid = "";
+			for (var i=0;i<dataStructure.length;i++) {
+				if (dataStructure[i].type=="id") cellid = d[i];
+			}
+			d3.selectAll(".cell[cellid='"+cellid+"']").attr("class", "cell").attr("r",function(d){
+				// TODO: get radius attribute from corresponding svg				
+				return svg.attr("radius");
+			});		
 		});
 }
-
 
 // get the appropriate scale for the data type
 // TODO: ALL THIS IS SHIT, because I need to know all data beforehand, and what if I have tons of data that takes seconds to process? change scale with new data point if necessary

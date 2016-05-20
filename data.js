@@ -65,6 +65,6 @@ for (var i = 0; i<250; i++) {
 		{name: "id", type: "id"},
 		{name: "age", type: "int", unit: "Jahre"},
 		{name: "sex", type: "enum"},
-		{name: "lp(a)", type: "float"}
+		{name: "lp(a)", type: "float", unit: "mg/dl"}
 	);
 }

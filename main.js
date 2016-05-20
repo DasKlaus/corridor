@@ -40,9 +40,12 @@ function repaintColumn(index) {
 }
 */
 
-function drawCell(data, svg, scale) {
+function drawCell(data, svg) {
 	var radius = svg.attr("radius");
 	var index = svg.attr("index");
+	// check if scale is set and still correct
+	checkScale(dataStructure[index], data[index], svg);
+	var scale = dataStructure[index].scale;
 	var row = 0;
 	// row id is the first column of type id
 	// TODO: if no id, return index of row
@@ -68,17 +71,6 @@ function drawCell(data, svg, scale) {
 		.attr("value", data[index])
 		.attr("cellid", row)
 		.attr("column", index)
-		.attr("title", function(d) {
-			// output all columns of type id and also value as tooltip
-			// TODO: title tag doesn't seem to work on svg elements
-			var title = new Array();			
-			for (var i=0;i<dataStructure.length;i++) {
-				if (dataStructure[i].type=="id") title.push(data[i]);
-			}
-			title.push(data[index]);
-			if (dataStructure[index].unit) {title[title.length-1] += " "+dataStructure[index].unit;} // append unit, if set
-			return title.join(", ");
-		})
 		// on hover show tooltip and highlight all cells of this row
 		// TODO: don't do this in css, because no color management in css.
 		.on("mouseover", function(d) {
@@ -115,16 +107,9 @@ function drawColumn(select) {
 	var svg = d3.select("body").append("svg").attr("width",columnWidth).attr("height",columnHeight)
 		.attr("class","column")
 		.attr("index", index)
-		.attr("radius", radius);
+		.attr("radius", radius);/*
 	// TODO: make first scale only with first point, draw axis if scale changed
-	var scale = getScale(index); // TODO: initial scale, change if needed
-	// make axis
-	var axis = d3.svg.axis()
-	    .scale(scale)
-	    .orient("left")
-	    .ticks(20); // TODO: ticks will probably be dependent on data type
-	// TODO: draw boundaries if applicable
-	svg.append("g").attr("transform", "translate(40,0)").attr("class","axis").call(axis); // TODO: what if labels are wider than 40px? big numbers?
+	var scale = getScale(index); // TODO: initial scale, change if needed*/
 	// draw data
 	// TODO: call append on requestAnimationFrame for large data
 	// TODO: implement arrays - drawing more than one circle per dataset
@@ -132,53 +117,59 @@ function drawColumn(select) {
 	//chartArea.selectAll("cell").data(data).enter().each(drawCell);
 	var dataIndex = 0;
 	// set a new timer
+	// draw a new point every 10 ms
 	// TODO: requestAnimationFrame
 	var timer = setInterval(function() {
 		if (data[dataIndex][index] !== undefined && data[dataIndex][index] !== null) { // don't draw if value is null or undefined
-			drawCell(data[dataIndex], svg, scale)
+			drawCell(data[dataIndex], svg)
 		}
 		dataIndex++;
-		if (dataIndex >= data.length) {window.clearInterval(timer);}
-	}, 10); // draw a new point every 10 ms
-
+		if (dataIndex >= data.length) {window.clearInterval(timer);} // selfdestruct on end of data
+	}, 10);
 }
 
-// get the appropriate scale for the data type
-// TODO: ALL THIS IS SHIT, because I need to know all data beforehand, and what if I have tons of data that takes seconds to process? change scale with new data point if necessary
-function getScale(index) {
-	switch(dataStructure[index].type) {
-		case "float": var max = d3.max(data, function(row) {
-			  return row[index];
-			});
-			var min = d3.min(data, function(row) {
-			  return row[index];
-			});
-			var domain = max-min;
-			max = max + domain * 0.05;
-			if (min>0 && min<domain * 0.1) {min=0;} else {min = min - domain * 0.05;}
-			return d3.scale.linear().domain([min,max]).range([columnHeight,0]);;
-			break;
-		case "int": var max = d3.max(data, function(row) { // same as for float, but with rounded min and max values
-			  return row[index];
-			});
-			var min = d3.min(data, function(row) {
-			  return row[index];
-			});
-			var domain = max-min;
-			max = Math.ceil(max + domain * 0.05);
-			if (min>0 && min<domain * 0.1) {min=0;} // if minimum value is close to zero, start the scale at zero
-			else {min = Math.floor(min - domain * 0.05);}
-			return d3.scale.linear().domain([min,max]).range([columnHeight,0]);;
-			break;
-		case "enum": 
-			// TODO: nonono ordinal scales, because rangeRoundBands will all be the same height instead of proportional.
-			var domain = data.map(function(d) {
-				return d[index]; 
-			});
-			var clean = domain.keys();
-			return d3.scale.ordinal().domain(domain.keys()).rangeRoundBands([columnHeight, 0]);
-			break;
+function drawAxis(structure, svg) {
+	// remove if already drawn
+	svg.select(".axis").remove();
+	// generate axis
+	var axis = d3.svg.axis()
+	    .scale(structure.scale) // TODO: if enum, this will be different
+	    .orient("left")
+	    .ticks(20); // TODO: if enum, this will be different
+	// TODO: draw boundaries if applicable
+	svg.append("g").attr("transform", "translate(40,0)").attr("class","axis").call(axis); // TODO: what if labels are wider than 40px? big numbers?
+}
+
+function checkScale(structure, data, svg) {
+	if (!structure.scale) { // if no scale is set, create a new one and draw its axis
+		switch(structure.type) {
+			case "enum": break; // TODO
+			case "int":
+			case "float":
+			default: structure.min = data;
+				structure.max = data; 
+				structure.scale = d3.scale.linear().domain([data-1, data+1]).range([columnHeight,0]);
+				drawAxis(structure, svg);
+		}
+		return;
 	}
+	// check if scale is still correct
+	switch(structure.type) {
+		case "enum": break; // TODO
+		case "int":
+		case "float":
+		default: if (data>structure.min && data<structure.max) return; // no change in scale
+			if (data <= structure.min) { // set a new minimum at 5% of domain below actual minimum
+				// if minimum value is close to zero, start the scale at zero
+				structure.min = (data>0 && data<(structure.max-data) * 0.15)?0:data-(structure.max-data)*0.05; 
+			}
+			if (data >= structure.max) { // set a new maximum at 5% of domain above actual maximum
+				structure.max = data+(data-structure.min)*0.05;
+			}
+			structure.scale.domain([structure.min, structure.max]);
+			drawAxis(structure, svg); // redraw axis
+			// TODO: all cells up to this point need to be repositioned (with transitions)
+	}	
 }
 
 // TODO: dynamic number of datasets

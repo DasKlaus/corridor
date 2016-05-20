@@ -15,6 +15,8 @@ function init() {
 	columns.selectAll("option").filter(function(d) {
 		return (undefined!=d && d.type=="id");
 	}).attr("disabled","disabled"); // disable columns of type id (or maybe remove?)
+	// tooltip div
+	d3.select("body").append("div").attr("class", "tooltip");
 }
 
 // TODO: call repaint on window resize (and set column height)
@@ -41,6 +43,12 @@ function repaintColumn(index) {
 function drawCell(data, svg, scale) {
 	var radius = svg.attr("radius");
 	var index = svg.attr("index");
+	var row = 0;
+	// row id is the first column of type id
+	// TODO: if no id, return index of row
+	for (var i=0;i<dataStructure.length;i++) {
+		if (dataStructure[i].type=="id") row = data[i];
+	}
 	d3.select("svg[index='"+index+"'] .chart").append("circle")
 		.attr("r",radius) // TODO: make dependent on data density (define beforehand, change when needed)
 		.attr("cy", function(d) {return Math.round(scale(data[index]));})
@@ -57,13 +65,8 @@ function drawCell(data, svg, scale) {
 			return (columnWidth-50)/2 + (radius*2+1) * Math.ceil(same.size()/2) * side; // TODO: except if too wide! What then? make smaller circles bzw. less alpha
 		})
 		.attr("class", "cell")
-		.attr("value", function(d) {return data[index];})
-		.attr("cellid", function(d) {
-			// output the first column of type id as id
-			for (var i=0;i<dataStructure.length;i++) {
-				if (dataStructure[i].type=="id") return data[i];
-			}
-		})
+		.attr("value", data[index])
+		.attr("cellid", row)
 		.attr("column", index)
 		.attr("title", function(d) {
 			// output all columns of type id and also value as tooltip
@@ -76,23 +79,25 @@ function drawCell(data, svg, scale) {
 			if (dataStructure[index].unit) {title[title.length-1] += " "+dataStructure[index].unit;} // append unit, if set
 			return title.join(", ");
 		})
-		// on hover set css class for all cells with the same cell id
+		// on hover show tooltip and highlight all cells of this row
 		// TODO: don't do this in css, because no color management in css.
 		.on("mouseover", function(d) {
-
-			var cellid = "";
-			for (var i=0;i<dataStructure.length;i++) {
-				if (dataStructure[i].type=="id") cellid = data[i];
-			}
-			d3.selectAll(".cell[cellid='"+cellid+"']").attr("class", "cell hover").attr("r",5);
+			// show tooltip
+			var tooltipPositionMatrix = this.getScreenCTM().translate(+ this.getAttribute("cx"), + this.getAttribute("cy"));
+			var tooltiptext = row+", "+data[index];
+			if (dataStructure[index].unit) tooltiptext += " "+dataStructure[index].unit;
+			d3.select(".tooltip").style("display","block")
+				.style("top",(window.pageYOffset + tooltipPositionMatrix.f)+"px")
+				.style("left",(window.pageXOffset + tooltipPositionMatrix.e)+"px")
+				.text(tooltiptext);
+			// highlight all cells of this row
+			d3.selectAll(".cell[cellid='"+row+"']").attr("class", "cell hover").attr("r",5);
 		})
 		.on("mouseout", function(d) {
-			var cellid = "";
-			for (var i=0;i<dataStructure.length;i++) {
-				if (dataStructure[i].type=="id") cellid = data[i];
-			}
+			// hide tooltip
+			d3.select(".tooltip").style("display","none");
 			// remove hover class and restore original radius
-			d3.selectAll(".cell[cellid='"+cellid+"']").attr("class", "cell").attr("r", function(d){
+			d3.selectAll(".cell[cellid='"+row+"']").attr("class", "cell").attr("r", function(d){
 				return d3.select("svg[index='"+d3.select(this).attr("column")+"']").attr("radius");
 			});		
 		});
@@ -126,12 +131,16 @@ function drawColumn(select) {
 	var chartArea = svg.append("g").attr("class","chart").attr("transform","translate(50, 0)")
 	//chartArea.selectAll("cell").data(data).enter().each(drawCell);
 	var dataIndex = 0;
-	while (dataIndex < data.length) { // TODO: requestAnimationFrame
+	// set a new timer
+	// TODO: requestAnimationFrame
+	var timer = setInterval(function() {
 		if (data[dataIndex][index] !== undefined && data[dataIndex][index] !== null) { // don't draw if value is null or undefined
 			drawCell(data[dataIndex], svg, scale)
 		}
 		dataIndex++;
-	}
+		if (dataIndex >= data.length) {window.clearInterval(timer);}
+	}, 10); // draw a new point every 10 ms
+
 }
 
 // get the appropriate scale for the data type

@@ -49,18 +49,18 @@ function makeGauss(mean, deviation, process) {
 
 
 // create data
-for (var i = 0; i<2500; i++) {
+for (var i = 0; i<250; i++) {
 	var id = i;
 	var age = Math.round(makeRandom()*20+18+makeGauss(40,10,function(value){return(value>.25)?value/2:value;})); // skew towards older
 	var sex = (Math.floor(Math.abs(makeRandom()*2.5-age/100)))?"male":"female"; // skew towards female if older
-	var lpa = makeGauss(0,20, function(d){return Math.abs(d);}
-	); // no correlation, always positive
+	var lpa = makeGauss(0,20, function(d){return Math.abs(d);}); // no correlation, always positive
 	// TODO: more
 
 	data.push([id, age, sex, lpa]);
 
 	// describe data
 	// TODO: define boundaries
+	// TODO: make configurable
 	dataStructure = new Array(
 		{name: "id", type: "id"},
 		{name: "age", type: "int", unit: "Jahre"},

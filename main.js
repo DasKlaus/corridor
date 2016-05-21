@@ -1,5 +1,6 @@
 columnHeight = $(window).height()-100;
 columnWidth = 150;
+cellDrawSpeed = 1; // ms for each cell placement
 
 // TODO: nest variables and functions into an object, so there's no accidental overloading when using this as a library
 
@@ -53,20 +54,36 @@ function drawCell(data, svg) {
 		if (dataStructure[i].type=="id") row = data[i];
 	}
 	d3.select("svg[index='"+index+"'] .chart").append("circle")
-		.attr("r",radius) // TODO: make dependent on data density (define beforehand, change when needed)
 		.attr("cy", function(d) {return Math.round(scale(data[index]));})
 		.attr("cx", function(d) {
 			// approximate distribution of cells over x axis
-			// TODO: refine placement on requestAnimationFrame
+			// TODO: refine placement on requestAnimationFrame (collision detection)
 			var y = Math.round(scale(data[index]));
 			// get all cells that are already placed around the same y value
-			var same = svg.selectAll("circle").filter(function(d) {
+			var same = svg.selectAll(".cell").filter(function(d) {
 					if (!d3.select(this).attr("value")) return false;
 					return Math.abs(Math.round(scale(d3.select(this).attr("value"))-y))<radius*2+1;
 				});
+			if ((same[0].length+1)*(radius*2+1)>=columnWidth-50) { // if the next point would have no room left, reduce radius
+				if (radius>0) {
+					radius--;				
+					svg.attr("radius", radius); // TODO: what if radius becomes 0?
+					svg.selectAll(".cell").each(function() {
+						// TODO: transitions!
+						var cell = d3.select(this);
+						cell.attr("r", function(d){return (radius>0)?radius:1;}).attr("cx", function() {
+							// calculate new x position
+							var offset = ((cell.attr("cx")-(columnWidth-50)/2));
+							var diff = offset/((radius+1)*2+1); // how many circles are we away from the center?
+							return cell.attr("cx") - 2 * diff;
+						});
+					});
+				}
+			}
 			var side = (same[0].length%2)*2-1;
 			return (columnWidth-50)/2 + (radius*2+1) * Math.ceil(same.size()/2) * side; // TODO: except if too wide! What then? make smaller circles bzw. less alpha
 		})
+		.attr("r", function(d){return (radius>0)?radius:1;})
 		.attr("class", "cell")
 		.attr("value", data[index])
 		.attr("cellid", row)
@@ -90,7 +107,8 @@ function drawCell(data, svg) {
 			d3.select(".tooltip").style("display","none");
 			// remove hover class and restore original radius
 			d3.selectAll(".cell[cellid='"+row+"']").attr("class", "cell").attr("r", function(d){
-				return d3.select("svg[index='"+d3.select(this).attr("column")+"']").attr("radius");
+				var thisRadius = d3.select("svg[index='"+d3.select(this).attr("column")+"']").attr("radius");				
+				return (thisRadius>0)?thisRadius:1;
 			});		
 		});
 }
@@ -101,7 +119,7 @@ function drawColumn(select) {
 	// TODO: split into functions
 	var index = select.value;
 	select.value = "none"; // reset select
-	var radius = 3; // starting radius
+	var radius = 5; // starting radius
 	if (d3.select(".column[index='"+index+"']").size()>0) return; // return if column already drawn
 	// create svg
 	var svg = d3.select("body").append("svg").attr("width",columnWidth).attr("height",columnHeight)
@@ -125,7 +143,7 @@ function drawColumn(select) {
 		}
 		dataIndex++;
 		if (dataIndex >= data.length) {window.clearInterval(timer);} // selfdestruct on end of data
-	}, 10);
+	}, cellDrawSpeed);
 }
 
 function drawAxis(structure, svg) {
@@ -168,7 +186,13 @@ function checkScale(structure, data, svg) {
 			}
 			structure.scale.domain([structure.min, structure.max]);
 			drawAxis(structure, svg); // redraw axis
-			// TODO: all cells up to this point need to be repositioned (with transitions)
+			// all cells drawn up to this point need to be repositioned
+			svg.selectAll(".cell").each(function() {
+				// TODO: transitions!
+				var cell = d3.select(this);
+				cell.attr("cy", Math.round(dataStructure[cell.attr("column")].scale(cell.attr("value"))));
+				// TODO: collision detection
+			});
 	}	
 }
 

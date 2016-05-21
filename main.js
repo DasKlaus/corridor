@@ -1,7 +1,7 @@
 columnHeight = $(window).height()-100;
 columnWidth = 150;
 cellDrawSpeed = 1; // ms for each cell placement
-
+// TODO: make these configurable and responding to resize
 // TODO: nest variables and functions into an object, so there's no accidental overloading when using this as a library
 
 function init() {
@@ -20,29 +20,8 @@ function init() {
 	d3.select("body").append("div").attr("class", "tooltip");
 }
 
-// TODO: call repaint on window resize (and set column height)
-/*
-function repaintColumn(index) {
-	// TODO: this is redundant.
-	var svg = d3.select(".column.index"+index);
-	var scale = getScale(index);
-	scale.range([columnHeight, 0]);
-	svg.select("g.axis").remove();
-	var axis = d3.svg.axis()
-	    .scale(scale)
-	    .orient("left")
-	    .ticks(20);
-	svg.append("g").attr("transform", "translate(40,0)").attr("class","axis").call(axis);
-	// recalculate cy
-	// TODO: css transitions	
-	svg.selectAll("circle").attr("cy", function(d) {return Math.round(scale(d[index]));});
-	// TODO: give circles a flag for the repaint process so I can differentiate between recalculated and not recalculated cx value for same
-	
-}
-*/
-
 function drawCell(data, svg) {
-	var radius = svg.attr("radius");
+	var radius = svg.attr("radius"); // a radius of zero is still drawn as a pixel, but without a pixel distance in between
 	var index = svg.attr("index");
 	// check if scale is set and still correct
 	checkScale(dataStructure[index], data[index], svg);
@@ -66,8 +45,8 @@ function drawCell(data, svg) {
 				});
 			if ((same[0].length+1)*(radius*2+1)>=columnWidth-50) { // if the next point would have no room left, reduce radius
 				if (radius>0) {
-					radius--;				
-					svg.attr("radius", radius); // TODO: what if radius becomes 0?
+					radius--;
+					svg.attr("radius", radius);
 					svg.selectAll(".cell").each(function() {
 						// TODO: transitions!
 						var cell = d3.select(this);
@@ -114,9 +93,7 @@ function drawCell(data, svg) {
 }
 
 function drawColumn(select) {
-	// TODO: make g for data points with offset for axis and later controls and labels
 	// TODO: output column names and, if set, unit
-	// TODO: split into functions
 	var index = select.value;
 	select.value = "none"; // reset select
 	var radius = 5; // starting radius
@@ -125,17 +102,12 @@ function drawColumn(select) {
 	var svg = d3.select("body").append("svg").attr("width",columnWidth).attr("height",columnHeight)
 		.attr("class","column")
 		.attr("index", index)
-		.attr("radius", radius);/*
-	// TODO: make first scale only with first point, draw axis if scale changed
-	var scale = getScale(index); // TODO: initial scale, change if needed*/
+		.attr("radius", radius);
 	// draw data
-	// TODO: call append on requestAnimationFrame for large data
 	// TODO: implement arrays - drawing more than one circle per dataset
 	var chartArea = svg.append("g").attr("class","chart").attr("transform","translate(50, 0)")
-	//chartArea.selectAll("cell").data(data).enter().each(drawCell);
 	var dataIndex = 0;
 	// set a new timer
-	// draw a new point every 10 ms
 	// TODO: requestAnimationFrame
 	var timer = setInterval(function() {
 		if (data[dataIndex][index] !== undefined && data[dataIndex][index] !== null) { // don't draw if value is null or undefined
@@ -155,7 +127,7 @@ function drawAxis(structure, svg) {
 	    .orient("left")
 	    .ticks(20); // TODO: if enum, this will be different
 	// TODO: draw boundaries if applicable
-	svg.append("g").attr("transform", "translate(40,0)").attr("class","axis").call(axis); // TODO: what if labels are wider than 40px? big numbers?
+	svg.append("g").attr("transform", "translate(40,0)").attr("class","axis").call(axis); // TODO: what if labels are wider than 40px? big numbers? strings?
 }
 
 function checkScale(structure, data, svg) {
@@ -188,7 +160,6 @@ function checkScale(structure, data, svg) {
 			drawAxis(structure, svg); // redraw axis
 			// all cells drawn up to this point need to be repositioned
 			svg.selectAll(".cell").each(function() {
-				// TODO: transitions!
 				var cell = d3.select(this);
 				cell.attr("cy", Math.round(dataStructure[cell.attr("column")].scale(cell.attr("value"))));
 				// TODO: collision detection
@@ -197,7 +168,6 @@ function checkScale(structure, data, svg) {
 }
 
 // TODO: dynamic number of datasets
-// TODO: dynamically responding to window size
 // TODO: optional adding group boundaries to floats and ints, or gradients, or colors
 // TODO: dynamic output of grouped data for chart drawing (probably) (later)
 

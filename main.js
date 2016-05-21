@@ -43,8 +43,8 @@ function drawCell(data, svg) {
 					return Math.round(makeGauss(center, height/4-2*radius, function(value){
 						// prevent value from deviating outside of the placement area
 						if (value>2 || value<-2) {
-							value = makeGauss(0, 1); // TODO: nope!
-						} 
+							value = value/10; // should do
+						}
 						return value;}));
 					break;
 				case "int":
@@ -60,7 +60,7 @@ function drawCell(data, svg) {
 			// get all cells that are already placed around the same y value
 			var same = svg.selectAll(".cell").filter(function(d) {
 					if (!d3.select(this).attr("value")) return false;
-					return Math.abs(Math.round(scale(d3.select(this).attr("value"))-y))<radius*2+1;
+					return Math.abs(Math.round(d3.select(this).attr("cy")-y))<radius*2+1;
 				});
 			if ((same[0].length+1)*(radius*2+1)>=columnWidth-50) { // if the next point would have no room left, reduce radius
 				if (radius>0) {
@@ -170,9 +170,9 @@ function checkScale(structure, data, svg) {
 						if (structure.values[i].value == value) {
 							// get offset and height
 							var offset = structure.topixel(structure.values[i].offset); // lowest point
-							var height = structure.topixel(structure.values[i].percent);
+							var height = structure.topixel(structure.percent-structure.values[i].percent);
 							// return middle of the placeable area and height
-							return new Array(offset-height/2, height);
+							return new Array(Math.round(offset-height/2), Math.round(height));
 						}
 					}
 				};
@@ -230,7 +230,26 @@ function checkScale(structure, data, svg) {
 				offset = structure.values[i].percent;
 			}
 			drawAxis(structure, svg); // redraw axis
-			// TODO: all cells drawn up to this point need to be repositioned
+			// all cells drawn up to this point need to be repositioned
+			svg.selectAll(".cell").each(function() {
+				var cell = d3.select(this);
+				// check if out of bounds
+				var coords = structure.scale(cell.attr("value"));
+				var center = coords[0];
+				var height = coords[1];
+				if (cell.attr("cy")<center-height/2+cell.attr("r") || cell.attr("cy")>center+height/2-cell.attr("r"))
+				{
+					// reposition
+					cell.attr("cy", function() {
+						return Math.round(makeGauss(center, height/4-2*cell.attr("r"), function(value){
+							// prevent value from deviating outside of the placement area
+							if (value>2 || value<-2) {
+								value = value/10; // should do
+							}
+							return value;}));
+					});
+				}
+			});
 			break;
 		case "int":
 		case "float":

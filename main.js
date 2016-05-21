@@ -142,14 +142,30 @@ function drawAxis(structure, svg) {
 	// remove if already drawn
 	svg.select(".axis").remove();
 	switch(structure.type) {
-		case "enum": break; // TODO
+		case "enum": 
+			// make the container and line
+			var axis = svg.append("g").attr("transform", "translate(40,0)").attr("class","axis")
+			axis.append("path").attr("class", "domain").attr("d", "M-6,0H0V"+columnHeight+"H-6");
+			// label the middle of the value area
+			for (var i=0; i<structure.values.length; i++) {
+				var text = structure.values[i].value;
+				var ypos = structure.scale(structure.values[i].value)[0];
+				axis.append("g").attr("transform", "translate(-9,"+ypos+")")
+					.append("text").style("text-anchor", "middle").attr("transform", "rotate(-90)").text(text);
+			}
+			// draw boundaries
+			if (structure.boundaries) {
+				for (var i=0; i<structure.boundaries.length; i++) {
+					axis.append("path").attr("class","boundary").attr("d","M0,"+structure.boundaries[i]+"H150").attr("stroke-width", 1).attr("stroke-dasharray","1,2");
+				}
+			}
+			break;
 		case "int":
 		case "float":
 		default: var axis = d3.svg.axis()
 			    .scale(structure.scale)
 			    .orient("left")
 			    .ticks(20);
-			// TODO: draw boundaries if applicable
 			svg.append("g").attr("transform", "translate(40,0)").attr("class","axis").call(axis); // TODO: what if labels are wider than 40px? big numbers? strings?
 	}
 }

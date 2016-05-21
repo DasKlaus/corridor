@@ -23,8 +23,6 @@ path.domain {}
   stroke: #000;
 }
 
-.cell {transition: all 4s ease;}
-
 .cell.hover {fill: #66d;}
 
 .tooltip {position: absolute; z-index: 10; display: none; margin-top: -40px; margin-left: -50px; font-family: sans; color: #fff; background-color: rgba(0,0,0,0.5); padding: 5px;}

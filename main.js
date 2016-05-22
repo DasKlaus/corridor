@@ -1,5 +1,5 @@
 columnHeight = $(window).height()-100;
-columnWidth = 150;
+columnWidth = 100;
 cellDrawSpeed = 100; // ms for each cell placement
 // TODO: make these configurable and responding to resize
 // TODO: nest variables and functions into an object, so there's no accidental overloading when using this as a library
@@ -39,7 +39,7 @@ function collide(cell, svg) {
 	if (getCollidors(cellsInRow, cell.attr("cx"), radius)>0) {
 		// place cell at innermost position with no collisions
 		var deviation = 0; // deviation from center of column
-		var center = (columnWidth-50)/2; // center of column
+		var center = columnWidth/2; // center of column
 		while (getCollidors(cellsInRow, center+deviation, radius)>0) {
 			deviation = (deviation>0)?deviation*-1:(deviation*-1)+1; // alternate sides
 		}
@@ -89,7 +89,7 @@ function drawCell(data, svg) {
 					if (!d3.select(this).attr("value")) return false;
 					return Math.abs(Math.round(d3.select(this).attr("cy")-y))<radius*2+1;
 				});
-			if ((same[0].length+1)*(radius*2+1)>=columnWidth-50) { // if the next point would have no room left, reduce radius
+			if ((same[0].length+1)*(radius*2+1)>=columnWidth) { // if the next point would have no room left, reduce radius
 				if (radius>0) {
 					radius--;
 					svg.attr("radius", radius);
@@ -98,7 +98,7 @@ function drawCell(data, svg) {
 						var cell = d3.select(this);
 						cell.attr("r", function(d){return (radius>0)?radius:1;}).attr("cx", function() {
 							// calculate new x position
-							var offset = ((cell.attr("cx")-(columnWidth-50)/2));
+							var offset = ((cell.attr("cx")-columnWidth/2));
 							var diff = offset/((radius+1)*2+1); // how many circles are we away from the center?
 							return cell.attr("cx") - 2 * diff;
 						});
@@ -107,7 +107,7 @@ function drawCell(data, svg) {
 				// TODO: if radius is already zero, reduce opacity
 			}
 			var side = (same[0].length%2)*2-1;
-			return (columnWidth-50)/2 + (radius*2+1) * Math.ceil(same.size()/2) * side;
+			return columnWidth/2 + (radius*2+1) * Math.ceil(same.size()/2) * side;
 		})
 		.attr("r", function(d){return (radius>0)?radius:1;})
 		.attr("class", "cell")
@@ -147,13 +147,15 @@ function drawColumn(select) {
 	var radius = 5; // starting radius
 	if (d3.select(".column[index='"+index+"']").size()>0) return; // return if column already drawn
 	// create svg
-	var svg = d3.select("body").append("svg").attr("width",columnWidth).attr("height",columnHeight)
+	var svg = d3.select("body").append("svg").attr("width",columnWidth+50).attr("height",columnHeight)
 		.attr("class","column")
 		.attr("index", index)
 		.attr("radius", radius);
+	// draw border
+	svg.append("path").attr("class", "border").attr("d", "M40,0L"+(columnWidth+50)+" 0 L"+(columnWidth+50)+" "+columnHeight+" L40,"+columnHeight);
 	// draw data
 	// TODO: implement arrays - drawing more than one circle per dataset
-	var chartArea = svg.append("g").attr("class","chart").attr("transform","translate(50, 0)")
+	var chartArea = svg.append("g").attr("class","chart").attr("transform","translate(45, 0)")
 	var dataIndex = 0;
 	// set a new timer
 	// TODO: requestAnimationFrame
@@ -176,7 +178,7 @@ function drawAxis(structure, svg) {
 			axis.append("path").attr("class", "domain").attr("d", "M-6,0H0V"+columnHeight+"H-6");
 			// label the middle of the value area
 			for (var i=0; i<structure.values.length; i++) {
-				var text = structure.values[i].value;
+				var text = structure.values[i].value+" ("+Math.round(structure.values[i].percent)+"%)";
 				var ypos = structure.scale(structure.values[i].value)[0];
 				axis.append("g").attr("transform", "translate(-9,"+ypos+")")
 					.append("text").style("text-anchor", "middle").attr("transform", "rotate(-90)").text(text);

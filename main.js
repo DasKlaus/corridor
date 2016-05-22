@@ -20,6 +20,34 @@ function init() {
 	d3.select("body").append("div").attr("class", "tooltip");
 }
 
+function getCollidors(cellsInRow, x, radius) {
+	return cellsInRow.filter(function() {
+		if (Math.abs(d3.select(this).attr("cx")-x)<radius*2+1) return true; // colliding
+		return false; // not colliding
+	})[0].length;
+}
+
+// TODO: probably faster and prettier if placement is always at innermost non-colliding position instead of approximate placement first
+function collide(cell, svg) {
+	var radius = svg.attr("radius");
+	// check collision, treat cells as squares for efficiency
+	// get all cells at same height within radius 
+	var cellsInRow = svg.selectAll(".cell").filter(function() {
+		if(Math.abs(d3.select(this).attr("cy")-cell.attr("cy"))<radius*2+1) return true;
+		return false;
+	});
+	if (getCollidors(cellsInRow, cell.attr("cx"), radius)>0) {
+		// place cell at innermost position with no collisions
+		var deviation = 0; // deviation from center of column
+		var center = (columnWidth-50)/2; // center of column
+		while (getCollidors(cellsInRow, center+deviation, radius)>0) {
+			deviation = (deviation>0)?deviation*-1:(deviation*-1)+1; // alternate sides
+		}
+		cell.attr("cx", center+deviation);
+	}
+	// TODO: look if able to move to center?
+}
+
 function drawCell(data, svg) {
 	var radius = svg.attr("radius"); // a radius of zero is still drawn as a pixel, but without a pixel distance in between
 	var index = svg.attr("index");
@@ -32,7 +60,7 @@ function drawCell(data, svg) {
 	for (var i=0;i<dataStructure.length;i++) {
 		if (dataStructure[i].type=="id") row = data[i];
 	}
-	d3.select("svg[index='"+index+"'] .chart").append("circle")
+	var cell = d3.select("svg[index='"+index+"'] .chart").append("circle")
 		.attr("cy", function(d) {
 			switch(dataStructure[index].type) {
 				case "enum":
@@ -55,7 +83,6 @@ function drawCell(data, svg) {
 		})
 		.attr("cx", function(d) {
 			// approximate distribution of cells over x axis
-			// TODO: refine placement on requestAnimationFrame (collision detection)
 			var y = this.getAttribute("cy");
 			// get all cells that are already placed around the same y value
 			var same = svg.selectAll(".cell").filter(function(d) {
@@ -68,7 +95,6 @@ function drawCell(data, svg) {
 					svg.attr("radius", radius);
 					// all cells already drawn need to be redrawn
 					svg.selectAll(".cell").each(function() {
-						// TODO: transitions?
 						var cell = d3.select(this);
 						cell.attr("r", function(d){return (radius>0)?radius:1;}).attr("cx", function() {
 							// calculate new x position
@@ -78,9 +104,10 @@ function drawCell(data, svg) {
 						});
 					});
 				}
+				// TODO: if radius is already zero, reduce opacity
 			}
 			var side = (same[0].length%2)*2-1;
-			return (columnWidth-50)/2 + (radius*2+1) * Math.ceil(same.size()/2) * side; // TODO: except if too wide! What then? make smaller circles bzw. less alpha
+			return (columnWidth-50)/2 + (radius*2+1) * Math.ceil(same.size()/2) * side;
 		})
 		.attr("r", function(d){return (radius>0)?radius:1;})
 		.attr("class", "cell")
@@ -110,6 +137,7 @@ function drawCell(data, svg) {
 				return (thisRadius>0)?thisRadius:1;
 			});		
 		});
+	collide(cell, svg); // collision detection - refine placement if colliding
 }
 
 function drawColumn(select) {
@@ -283,7 +311,7 @@ function checkScale(structure, data, svg) {
 			svg.selectAll(".cell").each(function() {
 				var cell = d3.select(this);
 				cell.attr("cy", Math.round(dataStructure[cell.attr("column")].scale(cell.attr("value"))));
-				// TODO: collision detection
+				collide(cell, svg);
 			});
 	}	
 }

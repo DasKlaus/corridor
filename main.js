@@ -1,4 +1,4 @@
-columnHeight = $(window).height()-100;
+columnHeight = window.innerHeight-200; // -80 for the header, -20 for some space at the bottom, -100 for labels etc
 columnWidth = 100;
 cellDrawSpeed = 100; // ms for each cell placement
 // TODO: make these configurable and responding to resize
@@ -68,9 +68,9 @@ function drawCell(data, svg) {
 					var center = coords[0];
 					var height = coords[1];
 					// place cell randomly in a Gaussian distribution in the area
-					return Math.round(makeGauss(center, height/4-2*radius, function(value){
+					return Math.round(makeGauss(center, height/6-2*radius, function(value){
 						// prevent value from deviating outside of the placement area
-						if (value>2 || value<-2) {
+						if (value>3 || value<-3) {
 							value = value/10; // should do
 						}
 						return value;}));
@@ -141,30 +141,39 @@ function drawCell(data, svg) {
 }
 
 function drawColumn(select) {
-	// TODO: output column names and, if set, unit
 	var index = select.value;
 	select.value = "none"; // reset select
 	var radius = 5; // starting radius
 	if (d3.select(".column[index='"+index+"']").size()>0) return; // return if column already drawn
 	// create svg
-	var svg = d3.select("body").append("svg").attr("width",columnWidth+50).attr("height",columnHeight)
+	var svg = d3.select("body").append("svg").attr("width",columnWidth+50).attr("height",columnHeight+100)
 		.attr("class","column")
 		.attr("index", index)
 		.attr("radius", radius);
-	// draw border
-	svg.append("path").attr("class", "border").attr("d", "M40,0L"+(columnWidth+50)+" 0 L"+(columnWidth+50)+" "+columnHeight+" L40,"+columnHeight);
-	// draw data
 	// TODO: implement arrays - drawing more than one circle per dataset
-	var chartArea = svg.append("g").attr("class","chart").attr("transform","translate(45, 0)")
-	var dataIndex = 0;
+	var chartArea = svg.append("g").attr("class","chart").attr("transform","translate(45, 10)")
+	// draw border
+	chartArea.append("path").attr("class", "border").attr("d", "M-5,0L"+(columnWidth+5)+" 0 L"+(columnWidth+5)+" "+columnHeight+" L-5,"+columnHeight);
+	// draw labels (column name and, if set, unit)
+	svg.append("text").style("text-anchor", "middle").style("font-weight", "bold")
+		.attr("transform", "translate("+(columnWidth/2+50)+","+(columnHeight+50)+")")
+		.text(dataStructure[index].name); // TODO: what if too wide?
+	if (dataStructure[index].unit) {
+		svg.append("text").style("text-anchor", "middle")
+			.attr("transform", "translate("+(columnWidth/2+50)+","+(columnHeight+80)+")")
+			.text("in "+dataStructure[index].unit);
+	}
+	// TODO draggable thingy
+	// draw data
+	var row = 0;
 	// set a new timer
 	// TODO: requestAnimationFrame
 	var timer = setInterval(function() {
-		if (data[dataIndex][index] !== undefined && data[dataIndex][index] !== null) { // don't draw if value is null or undefined
-			drawCell(data[dataIndex], svg)
+		if (data[row][index] !== undefined && data[row][index] !== null) { // don't draw if value is null or undefined
+			drawCell(data[row], svg)
 		}
-		dataIndex++;
-		if (dataIndex >= data.length) {window.clearInterval(timer);} // selfdestruct on end of data
+		row++;
+		if (row >= data.length) {window.clearInterval(timer);} // selfdestruct on end of data
 	}, cellDrawSpeed);
 }
 
@@ -174,7 +183,7 @@ function drawAxis(structure, svg) {
 	switch(structure.type) {
 		case "enum": 
 			// make the container and line
-			var axis = svg.append("g").attr("transform", "translate(40,0)").attr("class","axis")
+			var axis = svg.append("g").attr("transform", "translate(40,10)").attr("class","axis")
 			axis.append("path").attr("class", "domain").attr("d", "M-6,0H0V"+columnHeight+"H-6");
 			// label the middle of the value area
 			for (var i=0; i<structure.values.length; i++) {
@@ -196,7 +205,7 @@ function drawAxis(structure, svg) {
 			    .scale(structure.scale)
 			    .orient("left")
 			    .ticks(20);
-			svg.append("g").attr("transform", "translate(40,0)").attr("class","axis").call(axis); // TODO: what if labels are wider than 40px? big numbers? strings?
+			svg.append("g").attr("transform", "translate(40,10)").attr("class","axis").call(axis); // TODO: what if labels are wider than 40px? big numbers? strings?
 	}
 }
 

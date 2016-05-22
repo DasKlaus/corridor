@@ -63,7 +63,7 @@ for (var i = 0; i<500; i++) {
 	// TODO: make configurable
 	dataStructure = new Array(
 		{name: "id", type: "id"},
-		{name: "age", type: "int", unit: "Jahre"},
+		{name: "age", type: "int", unit: "years"},
 		{name: "sex", type: "enum"},
 		{name: "lp(a)", type: "float", unit: "mg/dl"}
 	);

@@ -49,7 +49,7 @@ function makeGauss(mean, deviation, process) {
 
 
 // create data
-for (var i = 0; i<500; i++) {
+for (var i = 0; i<250; i++) {
 	var id = i;
 	var age = Math.round(makeRandom()*20+18+makeGauss(40,10,function(value){return(value>.25)?value/2:value;})); // skew towards older
 	var sex = (Math.floor(Math.abs(makeRandom()*2.5-age/100)))?"male":"female"; // skew towards female if older

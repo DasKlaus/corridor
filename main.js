@@ -1,6 +1,6 @@
 columnHeight = window.innerHeight-200; // -80 for the header, -20 for some space at the bottom, -100 for labels etc
 columnWidth = 100;
-cellDrawSpeed = 100; // ms for each cell placement
+cellDrawSpeed = 50; // ms for each cell placement
 // TODO: make these configurable and responding to resize
 // TODO: nest variables and functions into an object, so there's no accidental overloading when using this as a library
 
@@ -172,24 +172,53 @@ function drawColumn(select) {
 		// TODO move slider (this) and resize corresponding rect
 		// get cutoff and get other cutoff boundary
 		if (d3.mouse(this.parentNode)[0]<0 || d3.mouse(this.parentNode)[0]>columnWidth+50) return; // mouse x coordinates out of bounds		
-		var target = d3.mouse(this.parentNode)[1]; // mouse y coordinate relative to the svg
+		var target = Math.round(d3.mouse(this.parentNode)[1]); // mouse y coordinate relative to the svg
 		// limit target y to actual chart area
-		if (target < 10) target = 10;
+		if (target < 0) target = 0;
 		if (target > columnHeight+10) target = columnHeight+10;
 		var dir = d3.select(this).attr("dir"); // find out if slider is top or bottom
 		// get current boundary set by the opposite slider and limit target y accordingly
-		// TODO: this selects the first cutoffs, not the right ones. use "this" to refine selection
-		var limit = (dir=="top")?d3.select(".cutoff[dir='bottom']").attr("y"):d3.select(".cutoff[dir='top']").attr("height"); // top limit is off by one
+		var limit = (dir=="top")?
+			d3.select(this.parentNode).select(".cutoff[dir='bottom']").attr("y"):
+			d3.select(this.parentNode).select(".cutoff[dir='top']").attr("height"); // top limit is off by one
 		if (dir=="top" && target>limit) target = limit-1;
-		if (dir=="bottom" && target<limit) target = limit+2; // +2 because top limit is off by one (margin owed to firefox top pixel cutoff)
+		if (dir=="bottom" && target<parseInt(limit)+1) target = parseInt(limit)+2; // +2 because top limit is off by one (margin owed to firefox top pixel cutoff)
+		var old = (dir=="top")?
+			d3.select(this.parentNode).select(".cutoff[dir='top']").attr("height"):
+			d3.select(this.parentNode).select(".cutoff[dir='bottom']").attr("y");
+		// get all cells between old and target position
+		cells = d3.select(this.parentNode).selectAll(".cell").filter(function(d) {
+			y = d3.select(this).attr("cy");
+				if (old<target) return (y>old && y<target);
+				if (old>target) return (y<old && y>target);
+				return false; // in case old == target
+			});
+		// depending on direction, deactivate or reactivate relevant cells
+		cells.each(function() {
+			var fill = (old<target && dir=="top")?"#666":"#000"; // cell color
+			var cellid = d3.select(this).attr("cellid");
+			d3.selectAll(".cell[cellid='"+cellid+"']") // get all cells belonging to same row
+				.style("fill", fill);
+		});
+		// move slider and resize corresponding cutoff rectangle
+		d3.select(this).attr("y", function(){
+			return (dir=="top")?target-5:target;
+		});
+		var svg = d3.select(this.parentNode);
+		var cutoff = svg.select(".cutoff[dir='"+dir+"']");
+			cutoff.attr("height", function(){
+					return (dir=="top")?target-1:columnHeight+20-target;
+				});
+			cutoff.attr("y", function(){
+					return (dir=="top")?1:target;
+				});
 
-
-		// TODO: move and then deactivate OR REACTIVATE everything - find out in what direction we're moving so we don't do redundant updates
+		
 		// TODO: snap to boundaries
 		// TODO: if enum, only ever snap to boundaries
 
 		// test
-		d3.select(".tooltip").style("display","block").text("target: "+target+", dir: "+dir+", limit: "+limit);
+		d3.select(".tooltip").style("display","block").text("old: "+old+", target: "+target+", dir: "+dir+", limit: "+limit);
 		
 	    })
 	    .on("dragend", function(){

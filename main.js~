@@ -154,9 +154,52 @@ function drawColumn(select) {
 	var chartArea = svg.append("g").attr("class","chart").attr("transform","translate(45, 10)")
 	// draw border
 	chartArea.append("path").attr("class", "border").attr("d", "M-5,0L"+(columnWidth+5)+" 0 L"+(columnWidth+5)+" "+columnHeight+" L-5,"+columnHeight);
-	// TODO draw labels (column name and, if set, unit)
-	svg.append("text").style("text-anchor", "middle").style("font-weight", "bold").attr("transform", "translate("+((columnWidth+50)/2)+","+(columnHeight+50)+")").text(dataStructure[index].name);
-	// TODO draggable thingy
+	// draw labels (column name and, if set, unit)
+	svg.append("text").style("text-anchor", "middle").style("font-weight", "bold")
+		.attr("transform", "translate("+(columnWidth/2+50)+","+(columnHeight+50)+")")
+		.text(dataStructure[index].name); // TODO: what if too wide?
+	if (dataStructure[index].unit) {
+		svg.append("text").style("text-anchor", "middle")
+			.attr("transform", "translate("+(columnWidth/2+50)+","+(columnHeight+80)+")")
+			.text("in "+dataStructure[index].unit);
+	}
+	// draw sliders
+	slide = d3.behavior.drag()
+	    .on("dragstart", function(){
+		// TODO visual effects
+	    })
+	    .on("drag", function(){
+		// TODO move slider (this) and resize corresponding rect
+		// get cutoff and get other cutoff boundary
+		if (d3.mouse(this.parentNode)[0]<0 || d3.mouse(this.parentNode)[0]>columnWidth+50) return; // mouse x coordinates out of bounds		
+		var target = d3.mouse(this.parentNode)[1]; // mouse y coordinate relative to the svg
+		// limit target y to actual chart area
+		if (target < 10) target = 10;
+		if (target > columnHeight+10) target = columnHeight+10;
+		var dir = d3.select(this).attr("dir"); // find out if slider is top or bottom
+		// get current boundary set by the opposite slider and limit target y accordingly
+		// TODO: this selects the first cutoffs, not the right ones. use "this" to refine selection
+		var limit = (dir=="top")?d3.select(".cutoff[dir='bottom']").attr("y"):d3.select(".cutoff[dir='top']").attr("height"); // top limit is off by one
+		if (dir=="top" && target>limit) target = limit-1;
+		if (dir=="bottom" && target<limit) target = limit+2; // +2 because top limit is off by one (margin owed to firefox top pixel cutoff)
+
+
+		// TODO: move and then deactivate OR REACTIVATE everything - find out in what direction we're moving so we don't do redundant updates
+		// TODO: snap to boundaries
+		// TODO: if enum, only ever snap to boundaries
+
+		// test
+		d3.select(".tooltip").style("display","block").text(d3.mouse(this.parentNode)+"<br>dir: "+dir+", limit: "+limit);
+		
+	    })
+	    .on("dragend", function(){
+		// TODO visual effects
+	    });
+	// TODO visual hover effects
+	svg.append("rect").attr("class","cutoff").attr("dir","top").attr("x",40).attr("y",1).attr("width",columnWidth+10).attr("height",9); // margin top because first pixel cuts off in firefox
+	svg.append("rect").attr("class","slider").attr("dir","top").attr("x",40).attr("y",5).attr("width",columnWidth+10).attr("height",5).call(slide);
+	svg.append("rect").attr("class","cutoff").attr("dir","bottom").attr("x",40).attr("y",columnHeight+10).attr("width",columnWidth+10).attr("height",9);
+	svg.append("rect").attr("class","slider").attr("dir","bottom").attr("x",40).attr("y",columnHeight+10).attr("width",columnWidth+10).attr("height",5).call(slide);
 	// draw data
 	var row = 0;
 	// set a new timer
@@ -304,10 +347,10 @@ function checkScale(structure, data, svg) {
 		default: if (data>structure.min && data<structure.max) return; // no change in scale
 			if (data <= structure.min) { // set a new minimum at 5% of domain below actual minimum
 				// if minimum value is close to zero, start the scale at zero
-				structure.min = (data>0 && data<(structure.max-data) * 0.15)?0:data-(structure.max-data)*0.05; 
+				structure.min = (data>0 && data<(structure.max-data) * 0.15)?0:data-(structure.max-data)*0.05; // TODO: round to something nice
 			}
 			if (data >= structure.max) { // set a new maximum at 5% of domain above actual maximum
-				structure.max = data+(data-structure.min)*0.05;
+				structure.max = data+(data-structure.min)*0.05; // TODO: round to something nice
 			}
 			structure.scale.domain([structure.min, structure.max]);
 			drawAxis(structure, svg); // redraw axis

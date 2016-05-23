@@ -12,7 +12,7 @@ svg {float: left; margin-right: 5px;}
 
 path.domain {}
 
-.axis path {
+.axis path, path.border {
   shape-rendering: crispEdges;
   stroke: #000;
   fill: none;
@@ -23,8 +23,10 @@ path.domain {}
   stroke: #000;
 }
 
-.boundary {stroke-width: 1; stroke-dasharray: 1,2;}
+.boundary {stroke-width: 1; stroke-dasharray: 1,2; shape-rendering: crispEdges;}
 
 .cell.hover {fill: #66d;}
+
+.cutoff {fill: rgba(0,0,0,0.3); border-left:1px solid #000; shape-rendering: crispEdges; stroke: #000;}
 
 .tooltip {position: absolute; z-index: 10; display: none; margin-top: -40px; margin-left: -50px; font-family: sans; color: #fff; background-color: rgba(0,0,0,0.5); padding: 5px;}

@@ -1,6 +1,8 @@
 columnHeight = window.innerHeight-200; // -80 for the header, -20 for some space at the bottom, -100 for labels etc
 columnWidth = 100;
 cellDrawSpeed = 50; // ms for each cell placement
+activeCell = "#000"; // standard color of cells
+inactiveCell = "#aaa"; // color of cells outside placed limits
 // TODO: make these configurable and responding to resize
 // TODO: nest variables and functions into an object, so there's no accidental overloading when using this as a library
 
@@ -109,14 +111,35 @@ function drawCell(data, svg) {
 			var side = (same[0].length%2)*2-1;
 			return columnWidth/2 + (radius*2+1) * Math.ceil(same.size()/2) * side;
 		})
-		.attr("r", function(d){return (radius>0)?radius:1;})
+		.attr("r", function(){return (radius>0)?radius:1;})
 		.attr("class", "cell")
 		.attr("value", data[index])
 		.attr("cellid", row)
-		.attr("column", index)
+		.attr("column", index)		
+		// save limitations by the limit sliders
+		// TODO: limit is buggy on rescale
+		.attr("limit", function(){
+			// copy limits from other cells of same row
+			var limit = d3.select(".cell[cellid='"+row+"']").attr("limit");
+			limit = (limit==null || limit=="")?new Array():limit.split(" ");
+			// TODO: why is this returning an array with an empty string?
+			if (limit.length>0) {
+				// deactivate this cell
+				d3.select(this).style("fill",inactiveCell);
+			}
+			var y = parseInt(d3.select(this).attr("cy"))+10; // add padding
+			var top = parseInt(svg.select(".cutoff[dir='top']").attr("height"))+1; // top limit is off by one
+			var bottom = svg.select(".cutoff[dir='bottom']").attr("y");
+			if (y<top || y>bottom) {
+				limit.push(index);
+				// deactivate all cells of this row
+				d3.selectAll(".cell[cellid='"+row+"']").attr("limit",limit.join(" ")).style("fill",inactiveCell);
+			}
+			return limit.join(" ");
+		})
 		// on hover show tooltip and highlight all cells of this row
 		// TODO: don't do this in css, because no color management in css.
-		.on("mouseover", function(d) {
+		.on("mouseover", function() {
 			// show tooltip
 			var tooltipPositionMatrix = this.getScreenCTM().translate(+ this.getAttribute("cx"), + this.getAttribute("cy"));
 			var tooltiptext = row+", "+data[index];
@@ -128,14 +151,14 @@ function drawCell(data, svg) {
 			// highlight all cells of this row
 			d3.selectAll(".cell[cellid='"+row+"']").attr("class", "cell hover").attr("r",5);
 		})
-		.on("mouseout", function(d) {
+		.on("mouseout", function() {
 			// hide tooltip
 			d3.select(".tooltip").style("display","none");
 			// remove hover class and restore original radius
-			d3.selectAll(".cell[cellid='"+row+"']").attr("class", "cell").attr("r", function(d){
+			d3.selectAll(".cell[cellid='"+row+"']").attr("class", "cell").attr("r", function(){
 				var thisRadius = d3.select("svg[index='"+d3.select(this).attr("column")+"']").attr("radius");				
 				return (thisRadius>0)?thisRadius:1;
-			});		
+			});
 		});
 	collide(cell, svg); // collision detection - refine placement if colliding
 }
@@ -172,9 +195,9 @@ function drawColumn(select) {
 		// TODO move slider (this) and resize corresponding rect
 		// get cutoff and get other cutoff boundary
 		if (d3.mouse(this.parentNode)[0]<0 || d3.mouse(this.parentNode)[0]>columnWidth+50) return; // mouse x coordinates out of bounds		
-		var target = Math.round(d3.mouse(this.parentNode)[1]); // mouse y coordinate relative to the svg
+		var target = d3.mouse(this.parentNode)[1]; // mouse y coordinate relative to the svg
 		// limit target y to actual chart area
-		if (target < 0) target = 0;
+		if (target < 10) target = 10;
 		if (target > columnHeight+10) target = columnHeight+10;
 		var dir = d3.select(this).attr("dir"); // find out if slider is top or bottom
 		// get current boundary set by the opposite slider and limit target y accordingly
@@ -182,23 +205,22 @@ function drawColumn(select) {
 			d3.select(this.parentNode).select(".cutoff[dir='bottom']").attr("y"):
 			d3.select(this.parentNode).select(".cutoff[dir='top']").attr("height"); // top limit is off by one
 		if (dir=="top" && target>limit) target = limit-1;
-		if (dir=="bottom" && target<limit+1) target = parseInt(limit)+1; // +2 because top limit is off by one (margin owed to firefox top pixel cutoff)
-		var old = (dir=="top")?
-			d3.select(this.parentNode).select(".cutoff[dir='top']").attr("height"):
-			d3.select(this.parentNode).select(".cutoff[dir='bottom']").attr("y");
-		// get all cells between old and target position
-		cells = d3.select(this.parentNode).selectAll(".cell").filter(function(d) {
-			y = d3.select(this).attr("cy");
-				if (old<target) return (y>old && y<target);
-				if (old>target) return (y<old && y>target);
-				return false; // in case old == target
-			});
-		// depending on direction, deactivate or reactivate relevant cells
-		cells.each(function() {
-			var fill = (old<target && dir=="top")?"#666":"#000"; // cell color
+		if (dir=="bottom" && target<parseInt(limit)+1) target = parseInt(limit)+2; // +2 because top limit is off by one (margin owed to firefox top pixel cutoff)
+		// color cells
+		d3.select(this.parentNode).selectAll(".cell").each(function() {
 			var cellid = d3.select(this).attr("cellid");
-			d3.selectAll(".cell[cellid='"+cellid+"']") // get all cells belonging to same row
-				.style("fill", fill);
+			var y = parseInt(d3.select(this).attr("cy"))+10; // add top padding
+			var limited = ((dir=="top" && y>target && y<limit) || (dir=="bottom" && y>limit && y<target))?0:1; // is inactive in this column
+			var limits = d3.select(this).attr("limit").split(" "); // existing limits for this cell
+			var cells = d3.selectAll(".cell[cellid='"+cellid+"']"); // get all cells belonging to same row			
+			if (limited && limits.indexOf(index)<0) {
+				limits.push(index); // add limit if not set
+				cells.attr("limit", limits.join(" ")).style("fill", inactiveCell); // set limit and color
+			}
+			if (!limited && limits.indexOf(index)>=0) {
+				limits = limits.splice(limits.indexOf(index),1); // remove limit if set
+				cells.attr("limit", limits.join(" ")).style("fill", activeCell); // set limit and color
+			}
 		});
 		// move slider and resize corresponding cutoff rectangle
 		d3.select(this).attr("y", function(){
@@ -213,12 +235,12 @@ function drawColumn(select) {
 					return (dir=="top")?1:target;
 				});
 
-		
+		// TODO: while cell painting, check if within these limits and define color accordingly
 		// TODO: snap to boundaries
 		// TODO: if enum, only ever snap to boundaries
 
 		// test
-		d3.select(".tooltip").style("display","block").text("old: "+old+", target: "+target+", dir: "+dir+", limit: "+limit);
+		// d3.select(".tooltip").style("display","block").text("old: "+old+", target: "+target+", dir: "+dir+", limit: "+limit);
 		
 	    })
 	    .on("dragend", function(){

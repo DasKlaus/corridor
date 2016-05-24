@@ -120,10 +120,9 @@ function drawCell(data, svg) {
 		// TODO: limit is buggy on rescale
 		.attr("limit", function(){
 			// copy limits from other cells of same row
-			var limit = d3.select(".cell[cellid='"+row+"']").attr("limit");
-			limit = (limit==null || limit=="")?new Array():limit.split(" ");
-			// TODO: why is this returning an array with an empty string?
-			if (limit.length>0) {
+			var limited = (d3.sum(d3.selectAll(".cell[cellid='"+row+"']")[0], function(d) {				
+				return (d3.select(d).attr("limit"))?parseInt(d3.select(d).attr("limit")):0;})>0);
+			if (limited) {
 				// deactivate this cell
 				d3.select(this).style("fill",inactiveCell);
 			}
@@ -131,11 +130,11 @@ function drawCell(data, svg) {
 			var top = parseInt(svg.select(".cutoff[dir='top']").attr("height"))+1; // top limit is off by one
 			var bottom = svg.select(".cutoff[dir='bottom']").attr("y");
 			if (y<top || y>bottom) {
-				limit.push(index);
 				// deactivate all cells of this row
-				d3.selectAll(".cell[cellid='"+row+"']").attr("limit",limit.join(" ")).style("fill",inactiveCell);
+				d3.selectAll(".cell[cellid='"+row+"']").style("fill",inactiveCell);
+				return 1;
 			}
-			return limit.join(" ");
+			return 0;
 		})
 		// on hover show tooltip and highlight all cells of this row
 		// TODO: don't do this in css, because no color management in css.
@@ -211,15 +210,14 @@ function drawColumn(select) {
 			var cellid = d3.select(this).attr("cellid");
 			var y = parseInt(d3.select(this).attr("cy"))+10; // add top padding
 			var limited = ((dir=="top" && y>target && y<limit) || (dir=="bottom" && y>limit && y<target))?0:1; // is inactive in this column
-			var limits = d3.select(this).attr("limit").split(" "); // existing limits for this cell
-			var cells = d3.selectAll(".cell[cellid='"+cellid+"']"); // get all cells belonging to same row			
-			if (limited && limits.indexOf(index)<0) {
-				limits.push(index); // add limit if not set
-				cells.attr("limit", limits.join(" ")).style("fill", inactiveCell); // set limit and color
+			d3.select(this).attr("limit",1);
+			var cells = d3.selectAll(".cell[cellid='"+cellid+"']"); // get all cells belonging to same row
+			var otherwiseLimited = (d3.sum(cells, function(d) {return parseInt(d.attr("limit"));})>0); // counts all limits, not only by this column
+			if (otherwiseLimited) {
+				cells.style("fill", inactiveCell);
 			}
-			if (!limited && limits.indexOf(index)>=0) {
-				limits = limits.splice(limits.indexOf(index),1); // remove limit if set
-				cells.attr("limit", limits.join(" ")).style("fill", activeCell); // set limit and color
+			if (!otherwiseLimited) {
+				cells.style("fill", activeCell);
 			}
 		});
 		// move slider and resize corresponding cutoff rectangle

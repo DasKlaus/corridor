@@ -2,7 +2,7 @@ columnHeight = window.innerHeight-200; // -80 for the header, -20 for some space
 columnWidth = 100;
 cellDrawSpeed = 50; // ms for each cell placement
 activeCell = "#000"; // standard color of cells
-inactiveCell = "#aaa"; // color of cells outside placed limits
+inactiveCell = "#ddd"; // color of cells outside placed limits
 // TODO: make these configurable and responding to resize
 // TODO: nest variables and functions into an object, so there's no accidental overloading when using this as a library
 
@@ -192,10 +192,9 @@ function drawColumn(select) {
 	// draw sliders
 	slide = d3.behavior.drag()
 	    .on("dragstart", function(){
-		// TODO visual effects
+		d3.select(this).attr("class", "slider dragging");
 	    })
 	    .on("drag", function(){
-		// TODO move slider (this) and resize corresponding rect
 		// get cutoff and get other cutoff boundary
 		if (d3.mouse(this.parentNode)[0]<0 || d3.mouse(this.parentNode)[0]>columnWidth+50) return; // mouse x coordinates out of bounds		
 		var target = d3.mouse(this.parentNode)[1]; // mouse y coordinate relative to the svg
@@ -239,16 +238,12 @@ function drawColumn(select) {
 					return (dir=="top")?1:target;
 				});
 
-		// TODO: while cell painting, check if within these limits and define color accordingly
 		// TODO: snap to boundaries
 		// TODO: if enum, only ever snap to boundaries
-
-		// test
-		// d3.select(".tooltip").style("display","block").text("old: "+old+", target: "+target+", dir: "+dir+", limit: "+limit);
 		
 	    })
 	    .on("dragend", function(){
-		// TODO visual effects
+		d3.select(this).attr("class", "slider");
 	    });
 	// TODO visual hover effects
 	svg.append("rect").attr("class","cutoff").attr("dir","top").attr("x",40).attr("y",1).attr("width",columnWidth+10).attr("height",9); // margin top because first pixel cuts off in firefox

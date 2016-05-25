@@ -27,8 +27,10 @@ path.domain {}
 
 .cell.hover {fill: #66d;}
 
-.cutoff {fill: rgba(0,0,0,0.3); shape-rendering: crispEdges; stroke: #000;}
+.cutoff {fill: rgba(0,0,0,0.1); shape-rendering: crispEdges; stroke: #000;}
 
 .slider {fill: rgba(0,0,0,0.3); shape-rendering: crispEdges; stroke: rgba(200,200,200,.5);}
+.slider.dragging {fill: rgba(0,0,0,0.6);}
+.slider:hover {cursor: ns-resize;}
 
 .tooltip {position: absolute; z-index: 10; display: none; margin-top: -40px; margin-left: -50px; font-family: sans; color: #fff; background-color: rgba(0,0,0,0.5); padding: 5px;}

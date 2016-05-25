@@ -117,11 +117,15 @@ function drawCell(data, svg) {
 		.attr("cellid", row)
 		.attr("column", index)		
 		// save limitations by the limit sliders
-		// TODO: limit is buggy on rescale
+		// TODO: limit is buggy on rescale TODO WIP
 		.attr("limit", function(){
-			// copy limits from other cells of same row
-			var limited = (d3.sum(d3.selectAll(".cell[cellid='"+row+"']")[0], function(d) {				
-				return (d3.select(d).attr("limit"))?parseInt(d3.select(d).attr("limit")):0;})>0);
+			// check if other rows have limits
+			var cells = d3.selectAll(".cell[cellid='"+row+"']"); // all other cells with this id
+			var limit = 0;
+			cells.each(function() {if (d3.select(this).attr("limit")) limit += parseInt(d3.select(this).attr("limit"));});
+			var limited = (limit>0);
+			/*var limited = (d3.sum(d3.selectAll(".cell[cellid='"+row+"']")[0], function(d) {				
+				return (d3.select(d).attr("limit"))?parseInt(d3.select(d).attr("limit")):0;})>0);*/
 			if (limited) {
 				// deactivate this cell
 				d3.select(this).style("fill",inactiveCell);
@@ -210,9 +214,11 @@ function drawColumn(select) {
 			var cellid = d3.select(this).attr("cellid");
 			var y = parseInt(d3.select(this).attr("cy"))+10; // add top padding
 			var limited = ((dir=="top" && y>target && y<limit) || (dir=="bottom" && y>limit && y<target))?0:1; // is inactive in this column
-			d3.select(this).attr("limit",1);
+			d3.select(this).attr("limit",limited);
 			var cells = d3.selectAll(".cell[cellid='"+cellid+"']"); // get all cells belonging to same row
-			var otherwiseLimited = (d3.sum(cells, function(d) {return parseInt(d.attr("limit"));})>0); // counts all limits, not only by this column
+			var otherLimits = 0;
+			cells.each(function() {if (d3.select(this).attr("limit")) otherLimits += parseInt(d3.select(this).attr("limit"));});			
+			var otherwiseLimited = (otherLimits>0); // counts all limits, not only by this column
 			if (otherwiseLimited) {
 				cells.style("fill", inactiveCell);
 			}

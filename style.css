@@ -6,7 +6,7 @@ h1 {color: #602; margin-left: -250px;}
 
 .backronym {color: #602; font-weight: bold;}
 
-#left {width: 250px; position: fixed; left: 0; top: 80px; bottom: 0; background-color: #cdc; padding: 10px;}
+#controller {width: 250px; position: fixed; left: 0; top: 80px; bottom: 0; background-color: #cdc; padding: 10px;}
 
 svg {float: left; margin-right: 5px;}
 

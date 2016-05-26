@@ -1,5 +1,7 @@
-data = new Array();
-dataStructure = new Array();
+/*
+  This file offers all functions pertaining to the IHK presentation.
+  It provides example data with approximate realistic distributions and dependencies.
+*/
 
 // seeded random numbers for consistent data generation
 seed = 0;
@@ -49,22 +51,27 @@ function makeGauss(mean, deviation, process) {
 
 
 // create data
-for (var i = 0; i<250; i++) {
-	var id = i;
-	var age = Math.round(makeRandom()*20+18+makeGauss(40,10,function(value){return(value>.25)?value/2:value;})); // skew towards older
-	var sex = (Math.floor(Math.abs(makeRandom()*2.5-age/100)))?"male":"female"; // skew towards female if older
-	var lpa = makeGauss(0,20, function(d){return Math.abs(d);}); // no correlation, always positive
-	// TODO: more
+function makeData(size) {
+	var size = parseInt(size) || 100;
+	var data = new Array();	
+	for (var i = 0; i<size; i++) {
+		var id = i;
+		var age = Math.round(makeRandom()*20+18+makeGauss(40,10,function(value){return(value>.25)?value/2:value;})); // skew towards older
+		var sex = (Math.floor(Math.abs(makeRandom()*2.5-age/100)))?"male":"female"; // skew towards female if older
+		var lpa = makeGauss(0,20, function(d){return Math.abs(d);}); // no correlation, always positive
+		// TODO: more
 
-	data.push([id, age, sex, lpa]);
+		data.push([id, age, sex, lpa]);
 
-	// describe data
-	// TODO: define boundaries
-	// TODO: make configurable
-	dataStructure = new Array(
-		{name: "id", type: "id"},
-		{name: "age", type: "int", unit: "years"},
-		{name: "sex", type: "enum"},
-		{name: "lp(a)", type: "float", unit: "mg/dl"}
-	);
+		// describe data
+		// TODO: define boundaries
+		// TODO: make configurable
+		var dataStructure = new Array(
+			{name: "id", type: "id"},
+			{name: "age", type: "int", unit: "years"},
+			{name: "sex", type: "enum"},
+			{name: "lp(a)", type: "float", unit: "mg/dl"}
+		);
+	}
+	init(data, dataStructure);
 }

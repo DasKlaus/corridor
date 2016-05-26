@@ -1,16 +1,50 @@
-columnHeight = window.innerHeight-200; // -80 for the header, -20 for some space at the bottom, -100 for labels etc
-columnWidth = 100;
-cellDrawSpeed = 50; // ms for each cell placement
-activeCell = "#000"; // standard color of cells
-inactiveCell = "#ddd"; // color of cells outside placed limits
+/*
+   This file defines EVERYTHING that is not specific for the IHK presentation.
+   It should stand alone when used in other projects.
+   Calling init with data and structure
+*/
+
+// TODO: remove css? At least everything not pertaining specifically to the presentation?
 // TODO: make these configurable and responding to resize
+/* Initialization of the main object 
+   it holds the default values for all configurable 
+*/
+corridor = {
+	columnHeight: window.innerHeight -200, // -80 for the header, -20 for some space at the bottom, -100 for labels etc
+	columnWidth: 100,
+	cellDrawSpeed: 50, // ms for each cell placement
+	activeCell: "#000", // standard color of cells
+	inactiveCell: "#ddd", // color of cells outside placed limits
+	data: new Array(),
+	structure: new Array(),
+	controllerId: "controller" // if of html object for form elements
+};
+
 // TODO: nest variables and functions into an object, so there's no accidental overloading when using this as a library
 
-function init() {
+function getStructure() {
+	// TODO: enter structure for data
+	// TODO: when finished, call init again with data and structure
+	// TODO: in HTML make checkbox if data generation should provide structure or not
+}
+
+// TODO: init should be called corridor and return the object, so it could be used like corridor().blablubb etc
+function init(data, structure) {
+	corridor.data = data;
+	if (structure) {
+		corridor.structure = structure;
+	} else {
+		getStructure();
+		return;
+	}
+	var controller = d3.select("#"+corridor.controllerId);
+	// TODO: remove all children of controller
+	// button for draw speed
+	controller.append("input").attr("type","text").attr("name","cellDrawSpeed").attr("value",corridor.cellDrawSpeed).attr("onchange","corridor.cellDrawSpeed = this.value;");
 	// button for adding columns
-	columns = d3.select("#left").append("select").attr("onchange", "drawColumn(this);");
+	columns = controller.append("select").attr("onchange", "drawColumn(this);");
 	columns.append("option").attr("value", "none").attr("disabled","disabled").append("tspan").html("draw column");
-	columns.selectAll("columns").data(dataStructure).enter().append("option").attr("value", function(column, i) {
+	columns.selectAll("columns").data(corridor.structure).enter().append("option").attr("value", function(column, i) {
 			return i;
 		}).append("tspan").html(function(column) {
 			return column.name;
@@ -41,7 +75,7 @@ function collide(cell, svg) {
 	if (getCollidors(cellsInRow, cell.attr("cx"), radius)>0) {
 		// place cell at innermost position with no collisions
 		var deviation = 0; // deviation from center of column
-		var center = columnWidth/2; // center of column
+		var center = corridor.columnWidth/2; // center of column
 		while (getCollidors(cellsInRow, center+deviation, radius)>0) {
 			deviation = (deviation>0)?deviation*-1:(deviation*-1)+1; // alternate sides
 		}
@@ -54,17 +88,17 @@ function drawCell(data, svg) {
 	var radius = svg.attr("radius"); // a radius of zero is still drawn as a pixel, but without a pixel distance in between
 	var index = svg.attr("index");
 	// check if scale is set and still correct
-	checkScale(dataStructure[index], data[index], svg);
-	var scale = dataStructure[index].scale;
+	checkScale(corridor.structure[index], data[index], svg);
+	var scale = corridor.structure[index].scale;
 	var row = 0;
 	// row id is the first column of type id
 	// TODO: if no id, return index of row
-	for (var i=0;i<dataStructure.length;i++) {
-		if (dataStructure[i].type=="id") row = data[i];
+	for (var i=0;i<corridor.structure.length;i++) {
+		if (corridor.structure[i].type=="id") row = data[i];
 	}
 	var cell = d3.select("svg[index='"+index+"'] .chart").append("circle")
 		.attr("cy", function(d) {
-			switch(dataStructure[index].type) {
+			switch(corridor.structure[index].type) {
 				case "enum":
 					var coords = scale(data[index]);
 					var center = coords[0];
@@ -91,7 +125,7 @@ function drawCell(data, svg) {
 					if (!d3.select(this).attr("value")) return false;
 					return Math.abs(Math.round(d3.select(this).attr("cy")-y))<radius*2+1;
 				});
-			if ((same[0].length+1)*(radius*2+1)>=columnWidth) { // if the next point would have no room left, reduce radius
+			if ((same[0].length+1)*(radius*2+1)>=corridor.columnWidth) { // if the next point would have no room left, reduce radius
 				if (radius>0) {
 					radius--;
 					svg.attr("radius", radius);
@@ -100,7 +134,7 @@ function drawCell(data, svg) {
 						var cell = d3.select(this);
 						cell.attr("r", function(d){return (radius>0)?radius:1;}).attr("cx", function() {
 							// calculate new x position
-							var offset = ((cell.attr("cx")-columnWidth/2));
+							var offset = ((cell.attr("cx")-corridor.columnWidth/2));
 							var diff = offset/((radius+1)*2+1); // how many circles are we away from the center?
 							return cell.attr("cx") - 2 * diff;
 						});
@@ -109,7 +143,7 @@ function drawCell(data, svg) {
 				// TODO: if radius is already zero, reduce opacity
 			}
 			var side = (same[0].length%2)*2-1;
-			return columnWidth/2 + (radius*2+1) * Math.ceil(same.size()/2) * side;
+			return corridor.columnWidth/2 + (radius*2+1) * Math.ceil(same.size()/2) * side;
 		})
 		.attr("r", function(){return (radius>0)?radius:1;})
 		.attr("class", "cell")
@@ -146,7 +180,7 @@ function drawCell(data, svg) {
 			// show tooltip
 			var tooltipPositionMatrix = this.getScreenCTM().translate(+ this.getAttribute("cx"), + this.getAttribute("cy"));
 			var tooltiptext = row+", "+data[index];
-			if (dataStructure[index].unit) tooltiptext += " "+dataStructure[index].unit;
+			if (corridor.structure[index].unit) tooltiptext += " "+corridor.structure[index].unit;
 			d3.select(".tooltip").style("display","block")
 				.style("top",(window.pageYOffset + tooltipPositionMatrix.f)+"px")
 				.style("left",(window.pageXOffset + tooltipPositionMatrix.e)+"px")
@@ -172,22 +206,22 @@ function drawColumn(select) {
 	var radius = 5; // starting radius
 	if (d3.select(".column[index='"+index+"']").size()>0) return; // return if column already drawn
 	// create svg
-	var svg = d3.select("body").append("svg").attr("width",columnWidth+50).attr("height",columnHeight+100)
+	var svg = d3.select("body").append("svg").attr("width",corridor.columnWidth+50).attr("height",corridor.columnHeight+100)
 		.attr("class","column")
 		.attr("index", index)
 		.attr("radius", radius);
 	// TODO: implement arrays - drawing more than one circle per dataset
 	var chartArea = svg.append("g").attr("class","chart").attr("transform","translate(45, 10)")
 	// draw border
-	chartArea.append("path").attr("class", "border").attr("d", "M-5,0L"+(columnWidth+5)+" 0 L"+(columnWidth+5)+" "+columnHeight+" L-5,"+columnHeight);
+	chartArea.append("path").attr("class", "border").attr("d", "M-5,0L"+(corridor.columnWidth+5)+" 0 L"+(corridor.columnWidth+5)+" "+corridor.columnHeight+" L-5,"+corridor.columnHeight);
 	// draw labels (column name and, if set, unit)
 	svg.append("text").style("text-anchor", "middle").style("font-weight", "bold")
-		.attr("transform", "translate("+(columnWidth/2+50)+","+(columnHeight+50)+")")
-		.text(dataStructure[index].name); // TODO: what if too wide?
-	if (dataStructure[index].unit) {
+		.attr("transform", "translate("+(corridor.columnWidth/2+50)+","+(corridor.columnHeight+50)+")")
+		.text(corridor.structure[index].name); // TODO: what if too wide?
+	if (corridor.structure[index].unit) {
 		svg.append("text").style("text-anchor", "middle")
-			.attr("transform", "translate("+(columnWidth/2+50)+","+(columnHeight+80)+")")
-			.text("in "+dataStructure[index].unit);
+			.attr("transform", "translate("+(corridor.columnWidth/2+50)+","+(corridor.columnHeight+80)+")")
+			.text("in "+corridor.structure[index].unit);
 	}
 	// draw sliders
 	slide = d3.behavior.drag()
@@ -196,11 +230,11 @@ function drawColumn(select) {
 	    })
 	    .on("drag", function(){
 		// get cutoff and get other cutoff boundary
-		if (d3.mouse(this.parentNode)[0]<0 || d3.mouse(this.parentNode)[0]>columnWidth+50) return; // mouse x coordinates out of bounds		
+		if (d3.mouse(this.parentNode)[0]<0 || d3.mouse(this.parentNode)[0]>corridor.columnWidth+50) return; // mouse x coordinates out of bounds		
 		var target = d3.mouse(this.parentNode)[1]; // mouse y coordinate relative to the svg
 		// limit target y to actual chart area
 		if (target < 10) target = 10;
-		if (target > columnHeight+10) target = columnHeight+10;
+		if (target > corridor.columnHeight+10) target = corridor.columnHeight+10;
 		var dir = d3.select(this).attr("dir"); // find out if slider is top or bottom
 		// get current boundary set by the opposite slider and limit target y accordingly
 		var limit = (dir=="top")?
@@ -232,7 +266,7 @@ function drawColumn(select) {
 		var svg = d3.select(this.parentNode);
 		var cutoff = svg.select(".cutoff[dir='"+dir+"']");
 			cutoff.attr("height", function(){
-					return (dir=="top")?target-1:columnHeight+20-target;
+					return (dir=="top")?target-1:corridor.columnHeight+20-target;
 				});
 			cutoff.attr("y", function(){
 					return (dir=="top")?1:target;
@@ -246,21 +280,21 @@ function drawColumn(select) {
 		d3.select(this).attr("class", "slider");
 	    });
 	// TODO visual hover effects
-	svg.append("rect").attr("class","cutoff").attr("dir","top").attr("x",40).attr("y",1).attr("width",columnWidth+10).attr("height",9); // margin top because first pixel cuts off in firefox
-	svg.append("rect").attr("class","slider").attr("dir","top").attr("x",40).attr("y",5).attr("width",columnWidth+10).attr("height",5).call(slide);
-	svg.append("rect").attr("class","cutoff").attr("dir","bottom").attr("x",40).attr("y",columnHeight+10).attr("width",columnWidth+10).attr("height",9);
-	svg.append("rect").attr("class","slider").attr("dir","bottom").attr("x",40).attr("y",columnHeight+10).attr("width",columnWidth+10).attr("height",5).call(slide);
+	svg.append("rect").attr("class","cutoff").attr("dir","top").attr("x",40).attr("y",1).attr("width",corridor.columnWidth+10).attr("height",9); // margin top because first pixel cuts off in firefox
+	svg.append("rect").attr("class","slider").attr("dir","top").attr("x",40).attr("y",5).attr("width",corridor.columnWidth+10).attr("height",5).call(slide);
+	svg.append("rect").attr("class","cutoff").attr("dir","bottom").attr("x",40).attr("y",corridor.columnHeight+10).attr("width",corridor.columnWidth+10).attr("height",9);
+	svg.append("rect").attr("class","slider").attr("dir","bottom").attr("x",40).attr("y",corridor.columnHeight+10).attr("width",corridor.columnWidth+10).attr("height",5).call(slide);
 	// draw data
 	var row = 0;
 	// set a new timer
 	// TODO: requestAnimationFrame
 	var timer = setInterval(function() {
-		if (data[row][index] !== undefined && data[row][index] !== null) { // don't draw if value is null or undefined
-			drawCell(data[row], svg)
+		if (corridor.data[row][index] !== undefined && corridor.data[row][index] !== null) { // don't draw if value is null or undefined
+			drawCell(corridor.data[row], svg)
 		}
 		row++;
-		if (row >= data.length) {window.clearInterval(timer);} // selfdestruct on end of data
-	}, cellDrawSpeed);
+		if (row >= corridor.data.length) {window.clearInterval(timer);} // selfdestruct on end of data
+	}, corridor.cellDrawSpeed);
 }
 
 function drawAxis(structure, svg) {
@@ -270,7 +304,7 @@ function drawAxis(structure, svg) {
 		case "enum": 
 			// make the container and line
 			var axis = svg.append("g").attr("transform", "translate(40,10)").attr("class","axis")
-			axis.append("path").attr("class", "domain").attr("d", "M-6,0H0V"+columnHeight+"H-6");
+			axis.append("path").attr("class", "domain").attr("d", "M-6,0H0V"+corridor.columnHeight+"H-6");
 			// label the middle of the value area
 			for (var i=0; i<structure.values.length; i++) {
 				var text = structure.values[i].value+" ("+Math.round(structure.values[i].percent)+"%)";
@@ -303,7 +337,7 @@ function checkScale(structure, data, svg) {
 				structure.values = new Array({value: data, total: 1, percent: 100, offset: 0}); // only one value yet known
 				structure.boundaries = new Array(); // only one value, so no boundaries
 				// make helper scale for pixel calculation from percent values
-				structure.topixel = d3.scale.linear().domain([0,structure.percent]).range([columnHeight,0]);
+				structure.topixel = d3.scale.linear().domain([0,structure.percent]).range([corridor.columnHeight,0]);
 				// scale is a custom function that returns the center of the block for this specific string and its height in pixels for cell placement
 				structure.scale = function(value) {
 					// search for value in structure.values
@@ -322,7 +356,7 @@ function checkScale(structure, data, svg) {
 			case "float":
 			default: structure.min = data;
 				structure.max = data; 
-				structure.scale = d3.scale.linear().domain([data-1, data+1]).range([columnHeight,0]);
+				structure.scale = d3.scale.linear().domain([data-1, data+1]).range([corridor.columnHeight,0]);
 		}
 		drawAxis(structure, svg);
 		return;
@@ -407,7 +441,7 @@ function checkScale(structure, data, svg) {
 			// all cells drawn up to this point need to be repositioned
 			svg.selectAll(".cell").each(function() {
 				var cell = d3.select(this);
-				cell.attr("cy", Math.round(dataStructure[cell.attr("column")].scale(cell.attr("value"))));
+				cell.attr("cy", Math.round(corridor.structure[cell.attr("column")].scale(cell.attr("value"))));
 				collide(cell, svg);
 			});
 	}	
@@ -418,4 +452,3 @@ function checkScale(structure, data, svg) {
 // TODO: optional adding group boundaries to floats and ints, or gradients, or colors
 // TODO: dynamic output of grouped data for chart drawing (probably) (later)
 
-init();

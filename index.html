@@ -6,11 +6,13 @@
 <meta charset="UTF-8">
 <link href="style.css" type="text/css" rel="stylesheet">
 <script src="d3.v3.min.js" charset="utf-8"></script> <!-- from d3js.org -->
-</head>
+<script src="data.js"></script>
+<script src="main.js"></script></head>
 <body>
 <h1>CORRIDOR</h1><span class="subhead"><span class="backronym">CORR</span>elated <span class="backronym">I</span>nteractive <span class="backronym">D</span>ata <span class="backronym">OR</span>ganisation<br>A tool for visualizing correlations in complex data</span>
-<div id="left"></div>
-<script src="data.js"></script>
-<script src="main.js"></script>
+<div id="controller">
+	<input type="text" name="dataSize" value="100" id="dataSize">
+	<input type="button" name="makeData" value="generate data" onClick="makeData(document.getElementById('dataSize').value);">
+</div>
 </body>
 </html>

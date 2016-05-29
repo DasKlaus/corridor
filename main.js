@@ -84,23 +84,17 @@ function collide(cell, svg) {
 	// TODO: look if able to move to center?
 }
 
-function drawCell(data, svg) {
+function drawCell(data, svg, row, column) {
 	var radius = svg.attr("radius"); // a radius of zero is still drawn as a pixel, but without a pixel distance in between
-	var index = svg.attr("index");
 	// check if scale is set and still correct
-	checkScale(corridor.structure[index], data[index], svg);
-	var scale = corridor.structure[index].scale;
-	var row = 0;
-	// row id is the first column of type id
-	// TODO: if no id, return index of row
-	for (var i=0;i<corridor.structure.length;i++) {
-		if (corridor.structure[i].type=="id") row = data[i];
-	}
-	var cell = d3.select("svg[index='"+index+"'] .chart").append("circle")
+	checkScale(corridor.structure[column], data, svg);
+	var scale = corridor.structure[column].scale;
+	var cell = d3.select("svg[column='"+column+"'] .chart").append("circle")
 		.attr("cy", function(d) {
-			switch(corridor.structure[index].type) {
+			switch(corridor.structure[column].type) {
+				case "enumarray":
 				case "enum":
-					var coords = scale(data[index]);
+					var coords = scale(data);
 					var center = coords[0];
 					var height = coords[1];
 					// place cell randomly in a Gaussian distribution in the area
@@ -114,7 +108,7 @@ function drawCell(data, svg) {
 				case "int":
 				case "float":
 				default:
-					return Math.round(scale(data[index]));
+					return Math.round(scale(data));
 			}
 		})
 		.attr("cx", function(d) {
@@ -147,9 +141,9 @@ function drawCell(data, svg) {
 		})
 		.attr("r", function(){return (radius>0)?radius:1;})
 		.attr("class", "cell")
-		.attr("value", data[index])
+		.attr("value", data)
 		.attr("cellid", row)
-		.attr("column", index)		
+		.attr("column", column)		
 		// save limitations by the limit sliders
 		// TODO: limit is buggy on rescale
 		.attr("limit", function(){
@@ -179,8 +173,8 @@ function drawCell(data, svg) {
 		.on("mouseover", function() {
 			// show tooltip
 			var tooltipPositionMatrix = this.getScreenCTM().translate(+ this.getAttribute("cx"), + this.getAttribute("cy"));
-			var tooltiptext = row+", "+data[index];
-			if (corridor.structure[index].unit) tooltiptext += " "+corridor.structure[index].unit;
+			var tooltiptext = row+", "+data;
+			if (corridor.structure[column].unit) tooltiptext += " "+corridor.structure[column].unit;
 			d3.select(".tooltip").style("display","block")
 				.style("top",(window.pageYOffset + tooltipPositionMatrix.f)+"px")
 				.style("left",(window.pageXOffset + tooltipPositionMatrix.e)+"px")
@@ -193,7 +187,7 @@ function drawCell(data, svg) {
 			d3.select(".tooltip").style("display","none");
 			// remove hover class and restore original radius
 			d3.selectAll(".cell[cellid='"+row+"']").attr("class", "cell").attr("r", function(){
-				var thisRadius = d3.select("svg[index='"+d3.select(this).attr("column")+"']").attr("radius");				
+				var thisRadius = d3.select("svg[column='"+d3.select(this).attr("column")+"']").attr("radius");				
 				return (thisRadius>0)?thisRadius:1;
 			});
 		});
@@ -201,14 +195,14 @@ function drawCell(data, svg) {
 }
 
 function drawColumn(select) {
-	var index = select.value;
+	var column = select.value;
 	select.value = "none"; // reset select
 	var radius = 5; // starting radius
-	if (d3.select(".column[index='"+index+"']").size()>0) return; // return if column already drawn
+	if (d3.select(".column[column='"+column+"']").size()>0) return; // return if column already drawn
 	// create svg
 	var svg = d3.select("body").append("svg").attr("width",corridor.columnWidth+50).attr("height",corridor.columnHeight+100)
 		.attr("class","column")
-		.attr("index", index)
+		.attr("column", column)
 		.attr("radius", radius);
 	// TODO: implement arrays - drawing more than one circle per dataset
 	var chartArea = svg.append("g").attr("class","chart").attr("transform","translate(45, 10)")
@@ -217,11 +211,11 @@ function drawColumn(select) {
 	// draw labels (column name and, if set, unit)
 	svg.append("text").style("text-anchor", "middle").style("font-weight", "bold")
 		.attr("transform", "translate("+(corridor.columnWidth/2+50)+","+(corridor.columnHeight+50)+")")
-		.text(corridor.structure[index].name); // TODO: what if too wide?
-	if (corridor.structure[index].unit) {
+		.text(corridor.structure[column].name); // TODO: what if too wide?
+	if (corridor.structure[column].unit) {
 		svg.append("text").style("text-anchor", "middle")
 			.attr("transform", "translate("+(corridor.columnWidth/2+50)+","+(corridor.columnHeight+80)+")")
-			.text("in "+corridor.structure[index].unit);
+			.text("in "+corridor.structure[column].unit);
 	}
 	// draw sliders
 	slide = d3.behavior.drag()
@@ -286,13 +280,31 @@ function drawColumn(select) {
 	svg.append("rect").attr("class","slider").attr("dir","bottom").attr("x",40).attr("y",corridor.columnHeight+10).attr("width",corridor.columnWidth+10).attr("height",5).call(slide);
 	// draw data
 	var row = 0;
+	var arrayindex = 0; // for data in arrays
 	// set a new timer
+	// TODO: rename index column?
 	// TODO: requestAnimationFrame
+	// TODO: detect array without special type
 	var timer = setInterval(function() {
-		if (corridor.data[row][index] !== undefined && corridor.data[row][index] !== null) { // don't draw if value is null or undefined
-			drawCell(corridor.data[row], svg)
+		data = null;
+		switch(corridor.structure[column].type) {
+			case "enumarray": 
+				var thisrow = corridor.data[row];
+				var arr = thisrow[column];
+				if (arrayindex < arr.length) 
+				data = corridor.data[row][column][arrayindex]; 
+				break;
+			default: data = corridor.data[row][column];
 		}
-		row++;
+		if (data !== undefined && data !== null) { // don't draw if value is null or undefined
+			drawCell(data, svg, row, column);
+		}
+		if (corridor.structure[column].type == "enumarray" && arrayindex < corridor.data[row][column].length-1) {
+			arrayindex++;
+		} else {
+			arrayindex = 0;
+			row++;
+		}
 		if (row >= corridor.data.length) {window.clearInterval(timer);} // selfdestruct on end of data
 	}, corridor.cellDrawSpeed);
 }
@@ -301,6 +313,7 @@ function drawAxis(structure, svg) {
 	// remove if already drawn
 	svg.select(".axis").remove();
 	switch(structure.type) {
+		case "enumarray":
 		case "enum": 
 			// make the container and line
 			var axis = svg.append("g").attr("transform", "translate(40,10)").attr("class","axis")
@@ -332,6 +345,7 @@ function drawAxis(structure, svg) {
 function checkScale(structure, data, svg) {
 	if (!structure.scale) { // if no scale is set, create a new one and draw its axis
 		switch(structure.type) {
+			case "enumarray": // TODO: only count the first - how? As id is now row, id = total. use that?
 			case "enum": structure.total = 1; // absolute number of datasets drawn
 				structure.percent = 100.0; // added percentages, always 100 if not an array of enums
 				structure.values = new Array({value: data, total: 1, percent: 100, offset: 0}); // only one value yet known
@@ -363,6 +377,8 @@ function checkScale(structure, data, svg) {
 	}
 	// check if scale is still correct
 	switch(structure.type) {
+		case "enumarray":
+			
 		case "enum": 
 			// add cell to total
 			structure.total++;
@@ -402,13 +418,14 @@ function checkScale(structure, data, svg) {
 					// add boundary
 					structure.boundaries.push(Math.round(structure.topixel(offset)));
 				}
-				offset = structure.values[i].percent;
+				offset += structure.values[i].percent;
 			}
 			drawAxis(structure, svg); // redraw axis
 			// all cells drawn up to this point need to be repositioned
 			svg.selectAll(".cell").each(function() {
 				var cell = d3.select(this);
 				// check if out of bounds
+				// TODO: check needs to include resorting
 				var coords = structure.scale(cell.attr("value"));
 				var center = coords[0];
 				var height = coords[1];

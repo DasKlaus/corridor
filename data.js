@@ -72,14 +72,14 @@ function makeData(size) {
 			{name: "id", type: "id"},
 			{name: "age", type: "int", unit: "years"},
 			{name: "sex", type: "enum"},
-			{name: "medication", type: "enumarray"},
+			{name: "medication", type: "enum"},
 			{name: "lp(a)", type: "float", unit: "mg/dl"}
 		);
 	}
 	init(data, dataStructure);
 }
 
-function makeMedication(rand, others) {
+function makeMedication(rand, others) { // TODO: dependencies!
 	if (others == undefined) others = new Array(); // if others are not set, create an empty array
 	var meds = others;
 	if (rand>7) return meds; // patient has no further medication

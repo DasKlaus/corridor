@@ -92,7 +92,6 @@ function drawCell(data, svg, row, column) {
 	var cell = d3.select("svg[column='"+column+"'] .chart").append("circle")
 		.attr("cy", function(d) {
 			switch(corridor.structure[column].type) {
-				case "enumarray":
 				case "enum":
 					var coords = scale(data);
 					var center = coords[0];
@@ -156,14 +155,14 @@ function drawCell(data, svg, row, column) {
 				return (d3.select(d).attr("limit"))?parseInt(d3.select(d).attr("limit")):0;})>0);*/
 			if (limited) {
 				// deactivate this cell
-				d3.select(this).style("fill",inactiveCell);
+				d3.select(this).style("fill",corridor.inactiveCell);
 			}
 			var y = parseInt(d3.select(this).attr("cy"))+10; // add padding
 			var top = parseInt(svg.select(".cutoff[dir='top']").attr("height"))+1; // top limit is off by one
 			var bottom = svg.select(".cutoff[dir='bottom']").attr("y");
 			if (y<top || y>bottom) {
 				// deactivate all cells of this row
-				d3.selectAll(".cell[cellid='"+row+"']").style("fill",inactiveCell);
+				d3.selectAll(".cell[cellid='"+row+"']").style("fill",corridor.inactiveCell);
 				return 1;
 			}
 			return 0;
@@ -247,10 +246,10 @@ function drawColumn(select) {
 			cells.each(function() {if (d3.select(this).attr("limit")) otherLimits += parseInt(d3.select(this).attr("limit"));});			
 			var otherwiseLimited = (otherLimits>0); // counts all limits, not only by this column
 			if (otherwiseLimited) {
-				cells.style("fill", inactiveCell);
+				cells.style("fill", corridor.inactiveCell);
 			}
 			if (!otherwiseLimited) {
-				cells.style("fill", activeCell);
+				cells.style("fill", corridor.activeCell);
 			}
 		});
 		// move slider and resize corresponding cutoff rectangle
@@ -282,28 +281,27 @@ function drawColumn(select) {
 	var row = 0;
 	var arrayindex = 0; // for data in arrays
 	// set a new timer
-	// TODO: rename index column?
 	// TODO: requestAnimationFrame
-	// TODO: detect array without special type
+	// TODO: count cells that have no value
 	var timer = setInterval(function() {
-		data = null;
-		switch(corridor.structure[column].type) {
-			case "enumarray": 
-				var thisrow = corridor.data[row];
-				var arr = thisrow[column];
-				if (arrayindex < arr.length) 
-				data = corridor.data[row][column][arrayindex]; 
-				break;
-			default: data = corridor.data[row][column];
-		}
-		if (data !== undefined && data !== null) { // don't draw if value is null or undefined
-			drawCell(data, svg, row, column);
-		}
-		if (corridor.structure[column].type == "enumarray" && arrayindex < corridor.data[row][column].length-1) {
-			arrayindex++;
+		var data = corridor.data[row][column];
+		// if data is an array, get data from current position in that array
+		if (Array.isArray(data)) {
+			if (arrayindex < data.length) {
+				data = data[arrayindex];
+				arrayindex++;
+			}
+			else { // end of array or empty array
+				data = null;
+				arrayindex = 0;
+				row++;
+			}
 		} else {
 			arrayindex = 0;
 			row++;
+		}
+		if (data !== undefined && data !== null) { // don't draw if value is null or undefined
+			drawCell(data, svg, row, column);
 		}
 		if (row >= corridor.data.length) {window.clearInterval(timer);} // selfdestruct on end of data
 	}, corridor.cellDrawSpeed);
@@ -313,7 +311,6 @@ function drawAxis(structure, svg) {
 	// remove if already drawn
 	svg.select(".axis").remove();
 	switch(structure.type) {
-		case "enumarray":
 		case "enum": 
 			// make the container and line
 			var axis = svg.append("g").attr("transform", "translate(40,10)").attr("class","axis")
@@ -345,7 +342,6 @@ function drawAxis(structure, svg) {
 function checkScale(structure, data, svg) {
 	if (!structure.scale) { // if no scale is set, create a new one and draw its axis
 		switch(structure.type) {
-			case "enumarray": // TODO: only count the first - how? As id is now row, id = total. use that?
 			case "enum": structure.total = 1; // absolute number of datasets drawn
 				structure.percent = 100.0; // added percentages, always 100 if not an array of enums
 				structure.values = new Array({value: data, total: 1, percent: 100, offset: 0}); // only one value yet known
@@ -377,10 +373,10 @@ function checkScale(structure, data, svg) {
 	}
 	// check if scale is still correct
 	switch(structure.type) {
-		case "enumarray":
-			
 		case "enum": 
 			// add cell to total
+			// TODO: total should be rownumber, so percentages are of patients, not of data points
+			// TODO: count patients without values, too
 			structure.total++;
 			// look for value in values
 			var valueData;

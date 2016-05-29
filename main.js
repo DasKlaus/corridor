@@ -119,6 +119,11 @@ function drawCell(data, svg, row, column) {
 	checkScale(corridor.structure[column], data, svg);
 	var scale = corridor.structure[column].scale;
 	var cell = d3.select("svg[column='"+column+"'] .chart").append("circle")
+		.attr("r", function(){return (radius>0)?radius:1;})
+		.attr("class", "cell")
+		.attr("value", data)
+		.attr("cellid", row)
+		.attr("column", column)		
 		.attr("cy", function() {
 			switch(corridor.structure[column].type) {
 				case "enum":
@@ -134,12 +139,7 @@ function drawCell(data, svg, row, column) {
 		.attr("cx", function() {
 			return collide(d3.select(this),svg);
 		})
-		.attr("r", function(){return (radius>0)?radius:1;})
-		.attr("class", "cell")
-		.attr("value", data)
-		.attr("cellid", row)
-		.attr("column", column)		
-		// save limitations by the limit sliders
+		// save limitations by the limit sliders as binary
 		// TODO: limit is buggy on rescale
 		.attr("limit", function(){
 			// check if other rows have limits
@@ -428,19 +428,6 @@ function checkScale(structure, data, svg) {
 				offset += structure.values[i].percent;
 			}
 			drawAxis(structure, svg); // redraw axis
-			// check if cells need to be redrawn
-			/*svg.selectAll(".cell").each(function() { // TODO WIP
-				var cell = d3.select(this);
-				// check if out of bounds
-				var coords = structure.scale(cell.attr("value"));
-				var center = coords[0];
-				var height = coords[1];
-				if (cell.attr("cy")<center-height/2+parseInt(cell.attr("r")) || cell.attr("cy")>center+height/2-cell.attr("r"))
-				{
-					// reposition
-					cell.attr("cy", enumposition(center, height, cell.attr("r"))).attr("cx",function(){return collide(d3.select(this),svg);});
-				}
-			});*/
 			// select cells that need to be redrawn
 			var cells = svg.selectAll(".cell").filter(function() {
 				var cell = d3.select(this);
@@ -468,10 +455,10 @@ function checkScale(structure, data, svg) {
 		default: if (data>structure.min && data<structure.max) return; // no change in scale
 			if (data <= structure.min) { // set a new minimum at 5% of domain below actual minimum
 				// if minimum value is close to zero, start the scale at zero
-				structure.min = (data>0 && data<(structure.max-data) * 0.15)?0:data-(structure.max-data)*0.05; // TODO: round to something nice
+				structure.min = (data>0 && data<(structure.max-data) * 0.25)?0:roundNice(data-(structure.max-data)*0.1, structure.max-data); // TODO: round to something nice
 			}
 			if (data >= structure.max) { // set a new maximum at 5% of domain above actual maximum
-				structure.max = data+(data-structure.min)*0.05; // TODO: round to something nice
+				structure.max = roundNice(data+(data-structure.min)*0.1, data-structure.min); // TODO: round to something nice
 			}
 			structure.scale.domain([structure.min, structure.max]);
 			drawAxis(structure, svg); // redraw axis
@@ -479,6 +466,16 @@ function checkScale(structure, data, svg) {
 			svg.selectAll(".cell").attr("cy", function() {return Math.round(corridor.structure[svg.attr("column")].scale(d3.select(this).attr("value")));});
 			svg.selectAll(".cell").attr("cx", function() {return collide(d3.select(this), svg);});
 	}	
+}
+
+function roundNice(value, domain) {
+	// maximum rounding error is 10% of domain
+	var limit = domain*0.1;
+	var precision = 1;
+	while(Math.abs(value-value.toPrecision(precision))>limit) {
+		precision++;
+	}
+	return value.toPrecision(precision);
 }
 
 // TODO: enum scale should group data below a certain height to "other"

@@ -37,6 +37,7 @@ function makeGauss(mean, deviation, process) {
 }
 
 // TODO: function to skew Gauss curve towards one side
+// TODO: dates as datatype
 
 // make data
 // similar to Kapro data because familarity

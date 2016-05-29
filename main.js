@@ -6,6 +6,7 @@
 
 // TODO: remove css? At least everything not pertaining specifically to the presentation?
 // TODO: make these configurable and responding to resize
+// TODO: make number type for data instead of ints and floats
 /* Initialization of the main object 
    it holds the default values for all configurable 
 */
@@ -17,7 +18,7 @@ corridor = {
 	inactiveCell: "#ddd", // color of cells outside placed limits
 	data: new Array(),
 	structure: new Array(),
-	controllerId: "controller" // if of html object for form elements
+	controllerId: "controller" // id of html object for form elements
 };
 
 // TODO: nest variables and functions into an object, so there's no accidental overloading when using this as a library
@@ -38,7 +39,8 @@ function init(data, structure) {
 		return;
 	}
 	var controller = d3.select("#"+corridor.controllerId);
-	// TODO: remove all children of controller
+	// remove all children of controller
+	controller.selectAll("*").remove();
 	// button for draw speed
 	controller.append("input").attr("type","text").attr("name","cellDrawSpeed").attr("value",corridor.cellDrawSpeed).attr("onchange","corridor.cellDrawSpeed = this.value;");
 	// button for adding columns
@@ -51,9 +53,25 @@ function init(data, structure) {
 		});
 	columns.selectAll("option").filter(function(d) {
 		return (undefined!=d && d.type=="id");
-	}).attr("disabled","disabled"); // disable columns of type id (or maybe remove?)
+	}).attr("disabled","disabled"); // disable columns of type id
 	// tooltip div
 	d3.select("body").append("div").attr("class", "tooltip");
+}
+
+function reduceRadius(radius, svg) {
+
+	if (radius>0) {
+		radius--;
+		svg.attr("radius", radius);
+		// all cells already drawn need to be redrawn
+		svg.selectAll(".cell").attr("r", function() {return (radius>0)?radius:1;})
+			.attr("cx", corridor.columnWidth+radius); // set x out bounds 
+		// recalculate new x
+		svg.selectAll(".cell").attr("cx", function() {
+			return collide(d3.select(this), svg);
+		});
+	}
+	// TODO: if radius is already zero, reduce opacity (needs to change formula triggering reduction, too)
 }
 
 function getCollidors(cellsInRow, x, radius) {
@@ -63,7 +81,6 @@ function getCollidors(cellsInRow, x, radius) {
 	})[0].length;
 }
 
-// TODO: probably faster and prettier if placement is always at innermost non-colliding position instead of approximate placement first
 function collide(cell, svg) {
 	var radius = svg.attr("radius");
 	// check collision, treat cells as squares for efficiency
@@ -72,16 +89,28 @@ function collide(cell, svg) {
 		if(Math.abs(d3.select(this).attr("cy")-cell.attr("cy"))<radius*2+1) return true;
 		return false;
 	});
-	if (getCollidors(cellsInRow, cell.attr("cx"), radius)>0) {
-		// place cell at innermost position with no collisions
-		var deviation = 0; // deviation from center of column
-		var center = corridor.columnWidth/2; // center of column
-		while (getCollidors(cellsInRow, center+deviation, radius)>0) {
-			deviation = (deviation>0)?deviation*-1:(deviation*-1)+1; // alternate sides
-		}
-		cell.attr("cx", center+deviation);
+	// place cell at innermost position with no collisions
+	var deviation = 0; // deviation from center of column
+	var center = corridor.columnWidth/2; // center of column
+	while (getCollidors(cellsInRow, center+deviation, radius)>0) {
+		deviation = (deviation>0)?deviation*-1:(deviation*-1)+1; // alternate sides
 	}
-	// TODO: look if able to move to center?
+	// if not enough space to place cell, reduce radius
+	if (Math.abs(deviation)>corridor.columnWidth/2-2*radius) {
+		reduceRadius(radius, svg);
+		// do it again, because now all x values have been reset.
+		return collide(cell, svg);
+	}
+	return (center+deviation);
+}
+
+function enumposition(center, height, radius) {
+	return Math.round(makeGauss(center, height/6-2*radius, function(value){
+		// prevent value from deviating outside of the placement area
+		if (value>3 || value<-3) {
+			value = value/10; // should do
+		}
+		return value;}));
 }
 
 function drawCell(data, svg, row, column) {
@@ -90,19 +119,11 @@ function drawCell(data, svg, row, column) {
 	checkScale(corridor.structure[column], data, svg);
 	var scale = corridor.structure[column].scale;
 	var cell = d3.select("svg[column='"+column+"'] .chart").append("circle")
-		.attr("cy", function(d) {
+		.attr("cy", function() {
 			switch(corridor.structure[column].type) {
 				case "enum":
-					var coords = scale(data);
-					var center = coords[0];
-					var height = coords[1];
 					// place cell randomly in a Gaussian distribution in the area
-					return Math.round(makeGauss(center, height/6-2*radius, function(value){
-						// prevent value from deviating outside of the placement area
-						if (value>3 || value<-3) {
-							value = value/10; // should do
-						}
-						return value;}));
+					return enumposition(scale(data)[0], scale(data)[1], radius);
 					break;
 				case "int":
 				case "float":
@@ -110,33 +131,8 @@ function drawCell(data, svg, row, column) {
 					return Math.round(scale(data));
 			}
 		})
-		.attr("cx", function(d) {
-			// approximate distribution of cells over x axis
-			var y = this.getAttribute("cy");
-			// get all cells that are already placed around the same y value
-			var same = svg.selectAll(".cell").filter(function(d) {
-					if (!d3.select(this).attr("value")) return false;
-					return Math.abs(Math.round(d3.select(this).attr("cy")-y))<radius*2+1;
-				});
-			if ((same[0].length+1)*(radius*2+1)>=corridor.columnWidth) { // if the next point would have no room left, reduce radius
-				if (radius>0) {
-					radius--;
-					svg.attr("radius", radius);
-					// all cells already drawn need to be redrawn
-					svg.selectAll(".cell").each(function() {
-						var cell = d3.select(this);
-						cell.attr("r", function(d){return (radius>0)?radius:1;}).attr("cx", function() {
-							// calculate new x position
-							var offset = ((cell.attr("cx")-corridor.columnWidth/2));
-							var diff = offset/((radius+1)*2+1); // how many circles are we away from the center?
-							return cell.attr("cx") - 2 * diff;
-						});
-					});
-				}
-				// TODO: if radius is already zero, reduce opacity
-			}
-			var side = (same[0].length%2)*2-1;
-			return corridor.columnWidth/2 + (radius*2+1) * Math.ceil(same.size()/2) * side;
+		.attr("cx", function() {
+			return collide(d3.select(this),svg);
 		})
 		.attr("r", function(){return (radius>0)?radius:1;})
 		.attr("class", "cell")
@@ -195,6 +191,7 @@ function drawCell(data, svg, row, column) {
 
 function drawColumn(select) {
 	var column = select.value;
+	corridor.structure[column].none = 0; // initialize counter of rows without values	
 	select.value = "none"; // reset select
 	var radius = 5; // starting radius
 	if (d3.select(".column[column='"+column+"']").size()>0) return; // return if column already drawn
@@ -203,11 +200,10 @@ function drawColumn(select) {
 		.attr("class","column")
 		.attr("column", column)
 		.attr("radius", radius);
-	// TODO: implement arrays - drawing more than one circle per dataset
 	var chartArea = svg.append("g").attr("class","chart").attr("transform","translate(45, 10)")
 	// draw border
 	chartArea.append("path").attr("class", "border").attr("d", "M-5,0L"+(corridor.columnWidth+5)+" 0 L"+(corridor.columnWidth+5)+" "+corridor.columnHeight+" L-5,"+corridor.columnHeight);
-	// draw labels (column name and, if set, unit)
+	// draw labels (column name, empty rows, and, if set, unit)
 	svg.append("text").style("text-anchor", "middle").style("font-weight", "bold")
 		.attr("transform", "translate("+(corridor.columnWidth/2+50)+","+(corridor.columnHeight+50)+")")
 		.text(corridor.structure[column].name); // TODO: what if too wide?
@@ -216,6 +212,9 @@ function drawColumn(select) {
 			.attr("transform", "translate("+(corridor.columnWidth/2+50)+","+(corridor.columnHeight+80)+")")
 			.text("in "+corridor.structure[column].unit);
 	}
+	svg.append("text").style("text-anchor", "middle")
+		.attr("transform", "translate("+(corridor.columnWidth/2+50)+","+(corridor.columnHeight+80)+")")
+		.attr("class", "empty").text("");
 	// draw sliders
 	slide = d3.behavior.drag()
 	    .on("dragstart", function(){
@@ -266,6 +265,7 @@ function drawColumn(select) {
 				});
 
 		// TODO: snap to boundaries
+		// TODO: keep relative position on scale on rescale
 		// TODO: if enum, only ever snap to boundaries
 		
 	    })
@@ -282,7 +282,7 @@ function drawColumn(select) {
 	var arrayindex = 0; // for data in arrays
 	// set a new timer
 	// TODO: requestAnimationFrame
-	// TODO: count cells that have no value
+	// TODO: check scale for even if no cell is drawn
 	var timer = setInterval(function() {
 		var data = corridor.data[row][column];
 		// if data is an array, get data from current position in that array
@@ -293,7 +293,10 @@ function drawColumn(select) {
 			}
 			else { // end of array or empty array
 				data = null;
-				arrayindex = 0;
+				if (arrayindex>0) {
+					arrayindex = 0;
+					corridor.structure[column].none--; // to prevent counting of arrays that reached their end
+				}
 				row++;
 			}
 		} else {
@@ -302,7 +305,12 @@ function drawColumn(select) {
 		}
 		if (data !== undefined && data !== null) { // don't draw if value is null or undefined
 			drawCell(data, svg, row, column);
-		}
+		} else {
+			// count empty data for accurate percentages
+			corridor.structure[column].none++;
+			// output
+			svg.select(".empty").text("no value: "+corridor.structure[column].none+" ("+Math.round(corridor.structure[column].none/row*100)+"%)");
+		} 
 		if (row >= corridor.data.length) {window.clearInterval(timer);} // selfdestruct on end of data
 	}, corridor.cellDrawSpeed);
 }
@@ -317,10 +325,12 @@ function drawAxis(structure, svg) {
 			axis.append("path").attr("class", "domain").attr("d", "M-6,0H0V"+corridor.columnHeight+"H-6");
 			// label the middle of the value area
 			for (var i=0; i<structure.values.length; i++) {
-				var text = structure.values[i].value+" ("+Math.round(structure.values[i].percent)+"%)";
 				var ypos = structure.scale(structure.values[i].value)[0];
-				axis.append("g").attr("transform", "translate(-9,"+ypos+")")
-					.append("text").style("text-anchor", "middle").attr("transform", "rotate(-90)").text(text);
+				var label = axis.append("g").attr("transform", "translate(-26,"+ypos+")");
+				label.append("text").style("text-anchor", "middle").attr("transform", "rotate(-90)").text(structure.values[i].value);
+				label.append("text").style("text-anchor", "middle").attr("transform", "rotate(-90) translate(0,18)")
+					.text(structure.values[i].total+" ("+Math.round(structure.values[i].percent)+"%)");
+				// TODO: if label is larger, make numbers smaller, cut off text, on hover write it out large
 			}
 			// draw boundaries
 			if (structure.boundaries) {
@@ -340,12 +350,13 @@ function drawAxis(structure, svg) {
 }
 
 function checkScale(structure, data, svg) {
-	if (!structure.scale) { // if no scale is set, create a new one and draw its axis
+	// if no scale is set, create a new one and draw its axis
+	if (!structure.scale) {
 		switch(structure.type) {
 			case "enum": structure.total = 1; // absolute number of datasets drawn
 				structure.percent = 100.0; // added percentages, always 100 if not an array of enums
 				structure.values = new Array({value: data, total: 1, percent: 100, offset: 0}); // only one value yet known
-				structure.boundaries = new Array(); // only one value, so no boundaries
+				structure.boundaries = new Array(); // only one value, so no boundaries yet
 				// make helper scale for pixel calculation from percent values
 				structure.topixel = d3.scale.linear().domain([0,structure.percent]).range([corridor.columnHeight,0]);
 				// scale is a custom function that returns the center of the block for this specific string and its height in pixels for cell placement
@@ -417,27 +428,40 @@ function checkScale(structure, data, svg) {
 				offset += structure.values[i].percent;
 			}
 			drawAxis(structure, svg); // redraw axis
-			// all cells drawn up to this point need to be repositioned
-			svg.selectAll(".cell").each(function() {
+			// check if cells need to be redrawn
+			/*svg.selectAll(".cell").each(function() { // TODO WIP
 				var cell = d3.select(this);
 				// check if out of bounds
-				// TODO: check needs to include resorting
 				var coords = structure.scale(cell.attr("value"));
 				var center = coords[0];
 				var height = coords[1];
-				if (cell.attr("cy")<center-height/2+cell.attr("r") || cell.attr("cy")>center+height/2-cell.attr("r"))
+				if (cell.attr("cy")<center-height/2+parseInt(cell.attr("r")) || cell.attr("cy")>center+height/2-cell.attr("r"))
 				{
 					// reposition
-					cell.attr("cy", function() {
-						return Math.round(makeGauss(center, height/4-2*cell.attr("r"), function(value){
-							// prevent value from deviating outside of the placement area
-							if (value>2 || value<-2) {
-								value = value/10; // should do
-							}
-							return value;}));
-					});
+					cell.attr("cy", enumposition(center, height, cell.attr("r"))).attr("cx",function(){return collide(d3.select(this),svg);});
 				}
+			});*/
+			// select cells that need to be redrawn
+			var cells = svg.selectAll(".cell").filter(function() {
+				var cell = d3.select(this);
+				var coords = structure.scale(cell.attr("value"));
+				var center = coords[0];
+				var height = coords[1];
+				// check if out of bounds
+				if (cell.attr("cy")<center-height/2+parseInt(cell.attr("r")) || cell.attr("cy")>center+height/2-cell.attr("r"))
+					return true;
+				return false;
 			});
+			cells.attr("cx", corridor.columnWidth+50) // set x out of bounds
+				.attr("cy", function(){
+					var cell = d3.select(this);
+					var coords = structure.scale(cell.attr("value"));
+					var center = coords[0];
+					var height = coords[1];
+					return enumposition(center, height, cell.attr("r"));
+				});
+			cells.attr("cx", function(){return collide(d3.select(this),svg);});
+
 			break;
 		case "int":
 		case "float":
@@ -452,11 +476,8 @@ function checkScale(structure, data, svg) {
 			structure.scale.domain([structure.min, structure.max]);
 			drawAxis(structure, svg); // redraw axis
 			// all cells drawn up to this point need to be repositioned
-			svg.selectAll(".cell").each(function() {
-				var cell = d3.select(this);
-				cell.attr("cy", Math.round(corridor.structure[cell.attr("column")].scale(cell.attr("value"))));
-				collide(cell, svg);
-			});
+			svg.selectAll(".cell").attr("cy", function() {return Math.round(corridor.structure[svg.attr("column")].scale(d3.select(this).attr("value")));});
+			svg.selectAll(".cell").attr("cx", function() {return collide(d3.select(this), svg);});
 	}	
 }
 

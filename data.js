@@ -80,6 +80,12 @@ function makeData(size) {
 	init(data, dataStructure);
 }
 
+// adds an element to an array with a likelihood in percent
+function addElement(array, element, percent) {
+	if (makeRandom()*100<percent) array.push(element);	
+	return array;
+}
+
 function makeMedication(rand, others) { // TODO: dependencies!
 	if (others == undefined) others = new Array(); // if others are not set, create an empty array
 	var meds = others;

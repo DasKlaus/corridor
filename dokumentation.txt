@@ -42,7 +42,7 @@ Folgende Teilaufgaben wurden identifiziert:
  - Erstellung von Beispieldaten
 	Auswahl sinnvoller Spalten, Identifikation von Grenzwerten und üblicher Verteilung von Werten sowie die Generierung dieser Daten unter Berücksichtigung dieser Verteilung und Grenzwerte mit Formeln, die Abhängigkeiten zwischen den Werten beinhalten.
  - Säulendarstellung von Daten als beeswarm plot für Zahlen und Zeichenketten
-	Iterative Platzierung von Datenpunkten in einem SVG-Graphen, dynamische Anpassung der Skala, Streuung der Punkte auf der X-Achse durch Kollisionserkennung, dynamische Anpassung des Punktradius entsprechend der Datendichte im Graphen, Performanzoptimierung und Tests all dieser Features.
+	Iterative Platzierung von Datenpunkten in einem SVG-Graphen, dynamische Anpassung der Skala, Streuung der Punkte auf der X-Achse durch Kollisionserkennung, Performanzoptimierung und Tests all dieser Features.
  - Eingrenzung des betrachteten Wertebereichs von Säulen
 	Gestaltung von Bedienelementen, Drag & Drop-Funktionalität von Bedienelementen, einfärben der eingegrenzten Zellen, Färben korrespondierender Zellen, Sicherstellen der Funktionalität bei Begrenzung mehrerer Spalten oder Begrenzung während des Zeichnens eines Graphen, Einrasten der Bedienelemente an Grenzwerte und Tests all dieser Features
  - Nutzeroberfläche erstellen
@@ -102,7 +102,7 @@ Um für Testzwecke gleichbleibende Daten zu erhalten, wurde eine Zufallszahlenim
 Als Beispieldaten wurden Alter, Geschlecht, Medikamente, Risikofaktoren, Diagnosen und die Blutfettwerte LDL (Low Density Lipid), HDL (High Density Lipid), Lp(a) (Lipoprotein a) und Triglyceride gewählt. Diese Werte werden für verschiedene Studien, die von der BioArtProducts GmbH betreut werden, erhoben, so dass Häufigkeit von Erkrankungen und Verteilung von Laborwerten von Patienten, die für Apheresebehandlung infrage kommen, aus diesen Datenbeständen erhoben und näherungsweise nachgebildet werden können. Um zu Demonstrationszwecken Abhängigkeiten aufzeigen zu können, wurden Korrelationen für diese Daten in die Formeln zur Generierung eingebaut. Diese stellen keine realen Zusammenhänge dar, sondern dienen der Veranschaulichung, wie das Projekt Korrelationen sichtbar machen kann. Reale Daten können aufgrund von Datenschutzbestimmungen [Quelle] nicht verwendet werden.
 
 #Spaltendarstellung
-Die Erzeugung eines Graphen zur Darstellung dieser Werte wurde mit der Visualisierungsbibliothek d3 [Quelle] realisiert. In einem SVG [Quelle] fester Breite und von der Browserfensterhöhe abhängiger Höhe werden Datenpunkte auf y-Achse entsprechend ihres Wertes in der darzustellenden Spalte platziert. Die entsprechende Skala wird initial für den ersten Wert erstellt und mit den folgenden Daten nach Bedarf angepasst, und aktualisiert bei Veränderungen alle vorher platzierten Punkte. Für Zahlenwerte wird eine lineare Skala verwendet, Zeichenketten wie z.B. Geschlecht oder Medikamente erhalten einen entsprechend ihrer Häufigkeit großen Bereich, in dem sie in Gausscher Normalverteilung zufällig platziert werden. Auf diese Weise entstehen für letztere Werte anschauliche Punktwolken, deren Größe die Häufigkeit des Auftretens des jeweiligen Wertes wiederspiegelt. Für die Verteilung auf der x-Achse wird jeder Punkt zunächst in der Mitte der Spalte platziert und im Folgenden mithilfe einfacher Kollisionserkennung (die jeden Punkt der Einfachkeit halber als Quadrat auffasst) so lange im wachsenden Abstand wechselnd links oder rechts von dieser Mitte bewegt, bis keine Überschneidung mit anderen Punkten mehr vorliegt. Auf diese Weise wird sichergestellt, dass jeder Punkt einzeln erkannt und ausgewählt werden kann. Hat ein Punkt keinen Platz mehr, wird der Radius aller Punkte verkleinert und seine Position auf der x-Achse neu berechnet. Auf diese Weile ist das Programm in der Lage, auf Bildschirmen mit einer Auflösung von 1080 Pixeln in der Höhe je nach Verteilung der Werte mehrere tausend Punkte darzustellen. Da in dieser Größenordnung auch die Generierung der Graphen einige Sekunden in Anspruch nimmt, und auf dem zum Testen verwendeten Arbeitsplatz Verzögerungen bei der Bedienung der interaktiven Elemente auftreten, wird davon abgeraten, das Programm in seiner jetzigen Form auf größere Datenbestände anzuwenden und die Darstellung für diese nicht weiter optimiert.
+Die Erzeugung eines Graphen zur Darstellung dieser Werte wurde mit der Visualisierungsbibliothek d3 [Quelle] realisiert. In einem SVG [Quelle] fester Breite und von der Browserfensterhöhe abhängiger Höhe werden Datenpunkte auf y-Achse entsprechend ihres Wertes in der darzustellenden Spalte platziert. Die entsprechende Skala wird initial für den ersten Wert erstellt und mit den folgenden Daten nach Bedarf angepasst, und aktualisiert bei Veränderungen alle vorher platzierten Punkte. Für Zahlenwerte wird eine lineare Skala verwendet, entgegen dem Projektantrag wird hierbei nicht zwischen Fließkomma- und Ganzzahlen unterschieden, da in den Anforderungen an die Darstellung keine sinnvollen Unterschiede zwischen beiden bestehen. Zeichenketten wie z.B. Geschlecht oder Medikamente erhalten einen entsprechend ihrer Häufigkeit großen Bereich, in dem sie in Gausscher Normalverteilung zufällig platziert werden. Auf diese Weise entstehen für letztere Werte anschauliche Punktwolken, deren Größe die Häufigkeit des Auftretens des jeweiligen Wertes wiederspiegelt. Für die Verteilung auf der x-Achse wird jeder Punkt zunächst in der Mitte der Spalte platziert und im Folgenden mithilfe einfacher Kollisionserkennung (die jeden Punkt der Einfachkeit halber als Quadrat auffasst) so lange im wachsenden Abstand wechselnd links oder rechts von dieser Mitte bewegt, bis keine Überschneidung mit anderen Punkten mehr vorliegt. Auf diese Weise wird sichergestellt, dass jeder Punkt einzeln erkannt und ausgewählt werden kann. Hat ein Punkt keinen Platz mehr, wird der Radius aller Punkte verkleinert und seine Position auf der x-Achse neu berechnet. Auf diese Weile ist das Programm in der Lage, auf Bildschirmen mit einer Auflösung von 1080 Pixeln in der Höhe je nach Verteilung der Werte mehrere tausend Punkte darzustellen. Da in dieser Größenordnung auch die Generierung der Graphen einige Sekunden in Anspruch nimmt, und auf dem zum Testen verwendeten Arbeitsplatz Verzögerungen bei der Bedienung der interaktiven Elemente auftreten, wird davon abgeraten, das Programm in seiner jetzigen Form auf größere Datenbestände anzuwenden und die Darstellung für diese nicht weiter optimiert.
 Punkte werden iterativ platziert, um Daten mit wenig Anpassungen auch z.B. per Ajax entgegennehmen zu können, ohne dass der Gesamtdatenbestand und mit ihm Extremwerte für die Skalenerzeugung vorher bekannt sein müssen.
 
 #Interaktive Wertebereichsbegrenzung
@@ -117,7 +117,17 @@ Sind Spalten platziert, können diese ausgewählt werden, indem der Spaltentitel
 Bei der Begutachtung bislang zur Anwendung gekommener Diagrammfunktionen, wie sie in [Prozessschnittstellen] beschrieben wurden, wurde erheblicher Überarbeitungsbedarf festgestellt. Größtes Problem stellen Redundanzen und Uneinheitlichkeiten dar - ähnliche Funktionen nehmen zum Teil gänzlich unterschiedlich vorbereitete Daten entgegen. Einzelne Diagrammtypen sind nicht dynamisch konfigurierbar, sondern stellen spezifische Einzellösungen dar, die nicht wiederverwendet werden können. Manche Konfigurationsmöglichkeiten bestehen nicht für alle Diagrammtypen, und viele visuelle Aspekte sind nicht automatisch gelöst, erfordern zum Beispiel die manuelle Übergabe von Zeilenumbrüchen für Beschriftungen. Aus diesem Grunde konnte dieses Feature nicht wie geplant eingebaut werden. Diese Projektarbeit wird jedoch auch nach Abgabe fortgeführt, verbessert und erweitert. Dabei wird auch der alte Funktionsbestand grundlegend überarbeitet und vereinheitlicht, so dass eine Ankopplung später möglich wird.
 Die für diese Aufgabe veranschlagte Zeit wurde in die dynamische Anpassung der Skalen und Punktradien gesteckt, um ein visuell ansprechendes Ergebnis präsentieren zu können.
 
+### Projektergebnisse (15)
+#Anpassungen
 
+Umgesetzt wurde ein Visualisierungstool, das aus Daten eine Spaltenansicht generiert, die iterativ Datenpunkte platziert und ihre Skala und die Punktgröße nach Bedarf anpasst. Durch Eingrenzung des Wertebereichs mit Schiebereglern können Zusammenhänge aufgezeigt werden.
+Größte Abweichung zum Projektantrag stellt der vollständige Verzicht auf die Möglichkeit dar, Spalten zur Diagrammerstellung auszuwählen und Diagramme zu generieren. Ursache hierfür findet sich in der ungenügenden Qualität und Einheitlichkeit des Codes, der dafür eingebunden werden sollte.
+
+
+Soll-Ist-Vergleich
+Soll:
+Planung: 12h
+Beispieldaten mit Abhängigkeiten: 4h
 Spaltendarstellung (int, enum, float, array) (Skala, Verteilung, iterativ (Skala!), Radius, Kollision, Performanz, design) - Tests: 28h
 Limits (drag & drop, Zellen färben, korrespondierende Zellen färben, nur entfärben wenn nirgendwo limitiert, Während Spaltenerzeugung (Skala!), snap to boundaries (Skala! Enum!), beidseitig, design) - Testen: 12h
 Oberfläche (spalten hinzufügen, Daten generieren mit Anzahl, Geschwindigkeit, Spalten benennen/Einheiten/boundaries (dataStructure)) - Testen: 8h
@@ -126,10 +136,74 @@ Diagramm erstellen (malen, speichern, design) - Testen: 4h
 Projektarbeit schreiben - Korrekturlesen: 12h
 Kundendokumentation (Anleitung, zweisprachig, design) - Korrekturlesen: 2h
 
-### Projektergebnisse (15)
+Ist:
+planung: 7h (-5)
+beispieldaten: 5h (+1)
+spaltendarstellung: 12h (+4)
+iterative, iterative scale: 7h
+dynamic radius: 5h
+arrays, enums: 10h
+design: 8h (Oberfläche, labels, Aussehen der Balken)
+cleanup: 4h (kommentare, struktur) (+4)
+limits: 16h (+4)
+projektarbeit: 10h (-2)
+kundendokumentation: 2h
+86 h
+
+Im Zeitaufwand sind einige Abweichungen feststellbar. Die Planung nahm deutlich weniger Zeit in Anspruch als veranschlagt, da Teilaufgaben aus dem Projektantrag und Absprachen im Unternehmen klar hervorgingen. Es konnte daher schnell zur Entwicklung übergegangen werden. Die Vorbereitung von Beispieldaten dauerte eine Stunde länger als erwartet. Da JavaScript über keine native Gausszahlen-Methode verfügt, musste diese selbst implementiert werden. Auch mussten für die Daten Formeln entwickelt werden, die klare Abhängigkeiten zeigen und dennoch zu glaubwürdiger Verteilung von Werten führen.
+Verschätzt wurde sich auch mit dem Aufwand der Spaltendarstellung. Während die grundlegende Verteilung schneller als gedacht umgesetzt werden konnte (12h), erforderten die dynamischen Skalen und Zellradien mehrfache Umstrukturierung des Aufbaus (12h). Auch die Verteilung von Punkten, die Zeichenkettenwerte darstellen, zeigte sich aufgrund der veränderlichen Skalen als umfangreiche Aufgabe (10h). Insgesamt betrug die Abweichung für diese Aufgaben, die unter einem Punkt in der Planung zusammengefasst waren, jedoch nur vier Stunden. Keine Abweichung gab es im Bereich Oberfläche, zu dem in der Ist-Rechnung auch Design der Graphen, z.B. Labels und dynamische Höhe, gezählt werden. 
+Die Eingrenzung des Wertebereichs stellte sich als Herausforderung heraus. Da die Anpassung der Darstellung in Echtzeit erfolgen sollte, musste hier nicht nur eine effektive, sondern auch effiziente Lösung gefunden werden. Auf Performanz lag ein besonderes Augenmerk.
+Im Schreiben der Projektarbeit konnten jedoch zwei Stunden Zeit eingespart werden. Aufgrund konsistenter Verwendung von Versionskontrolle und gründlicher Kommentierung des Codes ließen sich Arbeitsweise, Entscheidungsprozesse und Zeitaufwand leicht nachvollziehen und zusammenfassen.
+Insgesamt wurde die veranschlagte Zeit leicht überschritten. Dies konnte durch wenige Überstunden ausgeglichen werden, so dass eine pünktliche Abgabe erfolgen kann.
+
+#Qualitätskontrolle
+Zur Sicherstellung der Lesbar- und Nachvollziehbarkeit des Codes wurde dieser ausführlich kommentiert. Änderungen wurden mittels Versionskontrolle per git festgehalten, so dass sie nachvollziehbar sind und jederzeit rückgängig gemacht werden können. Am Ende der Implementierung jedes Features stand das Testen desselbigen mit verschiedenen Datenbeständen und Bildschirmgrößen, um volle Funktionstüchtigkeit und konsistente Darstellungsqualität zu gewährleisten. Relevante Zwischenschritte wurden Mitarbeitern vorgeführt und diesen Gelegenheit gegeben, den Code zu studieren und eigenständig zu testen. Nach Abgabe dieser Arbeit wird eine engere Zusammenarbeit angestrebt, da der Verfasser für weitergehende Anpassungen nicht mehr gewährleisten muss, diese eigenständig und ohne fremde Hilfe durchzuführen.
+
+Ausblick
+Das Programm soll für die BioArtProductsGmbH zum Einsatz kommen und wird daher weiterentwickelt. Dafür wird das Programm zunächst mit realen Studiendaten getestet und im Unternehmen präsentiert, um Änderungswünsche und Verbesserungsvorschläge zu sammeln und die Weiterentwicklung inhaltlich und zeitlich zu planen. Dazu gehört auch die Überarbeitung der Funktionen, die zur Diagrammerstellung entwickelt wurden und an die dieses Programm ursprünglich angeschlossen werden sollte. Ebenfalls notwendig ist die Verbesserung der Performanz; insbesondere die Neuberechnung einer Skala kann bei großen Datenmengen zu Einfrieren der Webseite führen und muss, wo sie sich nicht beschleunigen lässt, ebenfalls iterativ erfolgen.
+Zu den von Verfasserseite vorgeschlagenen Verbesserungen zählen weiterhin:
+* Lässt sich der Radius einer Zelle nicht weiter verkleinern, wenn die nächste Zelle keinen Platz mehr findet, soll sich seine Transparenz verringern und Überlappungen erlaubt werden
+* Spalten mit Zeichenkettenwerten könnten Werte mit geringer Häufigkeit zu einem "Sonstige"-Block addieren
+* Farbmanagement für Grenzwerte und Zeichenkettenwertegruppen
+* Spalten mit Datumswerten ermöglichen
+* Weitere Darstellungsmöglichkeit von Spalten mit mehreren Werten pro Datensatz als Menge der Werte (z.B. Darstellung der Anzahl der Medikamente pro Patient)
+* Überdenken des Wertebereichsbegrenzungskonzepts: unterbrochene Wertebereiche ermöglichen und Zeichenkettenwerte einzeln an- und abwählen, statt Schieberegler von oben und unten
+* Anzeige des exakten Grenzwertes auf numerischen Skalen bei Bewegen der Schieberegler
+
 
 ### Gestaltung des Projektes (15)
 
 ### Kundendokumentation (10)
 
+
+###TODO bis zur Abgabe
+#unbedingt
+Dokumentation fertig schreiben
+Kundendokumentation in Projekt selbst einbauen
+Dokumentation in Libre Office kopieren und formatieren
+Tabellen und Grafiken für Dokumentation erstellen
+// TODO: add all columns
+// TODO: make number type for data instead of ints and floats
+// TODO: nest functions into object, so there's no accidental overloading when using this as a library
+// TODO: don't do hover color in css, because no color management in css.
+// TODO: limit snap to boundaries
+// TODO: limit keep relative position on scale on rescale
+// TODO: if enum, only ever snap limit to boundaries
+// TODO: limit visual hover effects
+// TODO: check scale for even if no cell is drawn
+// TODO: total should be rownumber, so percentages are of patients, not of data points
+
+#vielleicht
+// TODO: remove css? At least everything not pertaining specifically to the presentation?
+// TODO: select a column and configure dataStructure
+// TODO: make height responding to resize
+// TODO: enter structure for data
+// TODO: in HTML make checkbox if data generation should provide structure or not and get structure from UI
+// TODO: init should be called corridor and return the object, so it could be used like corridor().blablubb etc
+// TODO: limit is buggy on rescale
+// TODO: what if labels too wide?
+// TODO: requestAnimationFrame
+// TODO: if label is larger, make numbers smaller, cut off text, on hover write it out large
+// TODO: boundaries for non-enums
+// TODO: show percentages of active columns
 

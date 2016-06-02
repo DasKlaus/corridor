@@ -32,22 +32,26 @@ function makeData(size) {
 		var medication = makeMedication(age, sex);
 		var diagnoses = makeDiagnoses(age, sex, medication);
 		var riskfactors = makeRiskfactors(age, sex, medication);
-		var lpa = makeGauss(0,20, function(d){return Math.abs(d);}); // no correlation, always positive
+		var lpa = makeLpa(diagnoses, riskfactors); // lipoprotein a
+		var ldl = makeLdl(diagnoses, riskfactors); // low density lipids
+		var hdl = makeHdl(ldl, age); // high density lipids
 		// TODO: more
 
-		data.push([id, age, sex, medication, diagnoses, riskfactors, lpa]);
+		data.push([id, age, sex, medication, diagnoses, riskfactors, lpa, ldl, hdl]);
 
 		// describe data
 		// TODO: define boundaries
 		// TODO: make configurable
 		var dataStructure = new Array(
-			{name: "id", type: "id"},
-			{name: "age", type: "int", unit: "years"},
-			{name: "sex", type: "enum"},
-			{name: "medication", type: "enum"},
-			{name: "diagnoses", type:"enum"},
-			{name: "riskfactors", type: "enum"},
-			{name: "lp(a)", type: "float", unit: "mg/dl"}
+			{name: "Id", type: "id"},
+			{name: "Age", type: "number", unit: "years"},
+			{name: "Sex", type: "enum"},
+			{name: "Medication", type: "enum"},
+			{name: "Diagnoses", type:"enum"},
+			{name: "Riskfactors", type: "enum"},
+			{name: "Lp(a)", type: "number", unit: "mg/dl"},
+			{name: "LDL", type: "number", unit: "mg/dl"},
+			{name: "HDL", type: "number", unit: "mg/dl"}
 		);
 	}
 	init(data, dataStructure);
@@ -62,11 +66,11 @@ function addElement(array, element, percent) {
 function makeMedication(age, sex) {
 	var sex = (sex=="female")?1:0;
 	var meds = new Array();
-	meds = addElement(meds, "Bisoprolol", age/2); // beta blocker for old patients
+	meds = addElement(meds, "Bisoprolol", age/3); // beta blocker for old patients
 	meds = addElement(meds, "Simvastatin", 10+20*sex); // statines randomly, more likely if female
 	if (meds.indexOf("Simvastatin")<0) meds = addElement(meds, "Atorvastatin", 20); // if no statine yet
-	meds = addElement(meds, "Ezetrol", 5); // cholesterine resorption inhibitor
-	meds = addElement(meds, "Insulin", 8); // insulin for diabetes
+	meds = addElement(meds, "Ezetrol", 10); // cholesterine resorption inhibitor
+	meds = addElement(meds, "Insulin", 14); // insulin for diabetes
 	return meds;
 }
 
@@ -92,8 +96,24 @@ function makeRiskfactors(age, sex, medication) {
 	return riskfactors;
 }
 
+function makeLpa(diagnoses, riskfactors) {
+	var cad = (diagnoses.indexOf("CAD")>=0)?1:0;
+	var adipositas = (riskfactors.indexOf("Adipositas")>=0)?1:0;
+	return Math.abs(makeGauss(0,20)+40*adipositas-10*cad); // higher lpa if adipose, lower if has coronary artery disease
+}
+
+function makeLdl(diagnoses, riskfactors) {
+	var pad = (diagnoses.indexOf("PAD")>=0)?1:0;
+	var adipositas = (riskfactors.indexOf("Adipositas")>=0)?1:0;
+	return Math.abs(makeGauss(110,20, function(value){return value+2*pad+adipositas;})); // higher ldl if adipose or has peripheral artery disease
+}
+
+function makeHdl(ldl, age) {
+	return 100-(ldl/2)+age;
+}
+
 // seeded random numbers for consistent data generation
-seed = 0;
+seed = 1;
 function makeRandom() {
 	var x = Math.sin(seed++)*10000;
 	return x-Math.floor(x); // throw away first four digits for randomness

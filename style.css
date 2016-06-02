@@ -1,34 +1,88 @@
-body {padding-left: 300px;}
+/* general page styling */
 
-h1 {color: #602; margin-left: -250px;}
+body {
+	padding-left: 300px;
+}
 
-.subhead {display: block; margin-top: -60px; margin-bottom: 20px;}
+h1 {
+	color: #602; 
+	margin-left: -250px;
+}
 
-.backronym {color: #602; font-weight: bold;}
+.subhead {
+	display: block; 
+	margin-top: -60px; 
+	margin-bottom: 20px;
+}
 
-#controller {width: 250px; position: fixed; left: 0; top: 80px; bottom: 0; background-color: #cdc; padding: 10px;}
+.backronym {
+	color: #602; 
+	font-weight: bold;
+}
 
-svg {float: left; margin-right: 5px;}
+/* user interface */
 
-path.domain {}
+#controller {
+	width: 250px; 
+	position: fixed; 
+	left: 0; 
+	top: 80px; 
+	bottom: 0; 
+	background-color: #cdc; 
+	padding: 10px;
+}
 
-.axis path, path.border {
+/* graph */
+
+svg {
+	float: left; 
+	margin-right: 5px;
+}
+
+.axis path, path.border, .axis line {
   shape-rendering: crispEdges;
   stroke: #000;
   fill: none;
 }
 
-.axis line {
-  shape-rendering: crispEdges;
-  stroke: #000;
+.empty, .label {
+	font-size: 10px;
 }
 
-.boundary {stroke-width: 1; stroke-dasharray: 1,2; shape-rendering: crispEdges;}
+.boundary {
+	stroke-width: 1; 
+	stroke-dasharray: 1,2; 
+	shape-rendering: crispEdges;
+}
 
-.cutoff {fill: rgba(0,0,0,0.1); shape-rendering: crispEdges; stroke: #000;}
+.cutoff {
+	fill: rgba(0,0,0,0.1); 
+	shape-rendering: crispEdges; 
+	stroke: #000;
+}
 
-.slider {fill: rgba(0,0,0,0.3); shape-rendering: crispEdges; stroke: rgba(200,200,200,.5);}
-.slider.dragging {fill: rgba(0,0,0,0.6);}
-.slider:hover {cursor: ns-resize;}
+.slider {
+	fill: rgba(0,0,0,0.3); 
+	shape-rendering: crispEdges; 
+	stroke: rgba(200,200,200,.5);
+}
 
-.tooltip {position: absolute; z-index: 10; display: none; margin-top: -40px; margin-left: -50px; font-family: sans; color: #fff; background-color: rgba(0,0,0,0.5); padding: 5px;}
+.slider.dragging {
+	fill: rgba(0,0,0,0.6);
+}
+
+.slider:hover {
+	cursor: ns-resize;
+}
+
+.tooltip {
+	position: absolute; 
+	z-index: 10; 
+	display: none; 
+	margin-top: -40px; 
+	margin-left: -50px; 
+	font-family: sans; 
+	color: #fff; 
+	background-color: rgba(0,0,0,0.5); 
+	padding: 5px;
+}

@@ -162,6 +162,7 @@ Zur Sicherstellung der Lesbar- und Nachvollziehbarkeit des Codes wurde dieser au
 Ausblick
 Das Programm soll für die BioArtProductsGmbH zum Einsatz kommen und wird daher weiterentwickelt. Dafür wird das Programm zunächst mit realen Studiendaten getestet und im Unternehmen präsentiert, um Änderungswünsche und Verbesserungsvorschläge zu sammeln und die Weiterentwicklung inhaltlich und zeitlich zu planen. Dazu gehört auch die Überarbeitung der Funktionen, die zur Diagrammerstellung entwickelt wurden und an die dieses Programm ursprünglich angeschlossen werden sollte. Ebenfalls notwendig ist die Verbesserung der Performanz; insbesondere die Neuberechnung einer Skala kann bei großen Datenmengen zu Einfrieren der Webseite führen und muss, wo sie sich nicht beschleunigen lässt, ebenfalls iterativ erfolgen.
 Zu den von Verfasserseite vorgeschlagenen Verbesserungen zählen weiterhin:
+* Kopplung von allen ressourcenintensiven Selektionen an Timer oder AnimationFrames, um Einfrieren zu verhindern
 * Lässt sich der Radius einer Zelle nicht weiter verkleinern, wenn die nächste Zelle keinen Platz mehr findet, soll sich seine Transparenz verringern und Überlappungen erlaubt werden
 * Spalten mit Zeichenkettenwerten könnten Werte mit geringer Häufigkeit zu einem "Sonstige"-Block addieren
 * Farbmanagement für Grenzwerte und Zeichenkettenwertegruppen
@@ -172,6 +173,8 @@ Zu den von Verfasserseite vorgeschlagenen Verbesserungen zählen weiterhin:
 
 
 ### Gestaltung des Projektes (15)
+Da das Programm in verschiedene Projekte eingebunden werden soll, die sich in ihrer Gestaltung stark voneinander unterscheiden können, wurde die Gestaltung möglichst neutral gehalten. Farben, Schriften und Graphenmaße können über CSS beziehungsweise Konfigurationsvariablen leicht angepasst werden. Für die Präsentation wurde ein schlichtes Design in unaufdringlichen Farben gewählt, das die Visualisierung für sich sprechen lässt.
+Die Gestaltung und Formatierung der Projektdokumentation wurde nach den IHK-Richtlinien [https://www.rostock.ihk24.de/aus_und_weiterbildung/Pruefungen/abschlusspruefung/Dokumentation_Projektarbeit/2646884] vorgenommen.
 
 ### Kundendokumentation (10)
 
@@ -182,16 +185,12 @@ Dokumentation fertig schreiben
 Kundendokumentation in Projekt selbst einbauen
 Dokumentation in Libre Office kopieren und formatieren
 Tabellen und Grafiken für Dokumentation erstellen
-// TODO: add all columns
-// TODO: make number type for data instead of ints and floats
 // TODO: nest functions into object, so there's no accidental overloading when using this as a library
-// TODO: don't do hover color in css, because no color management in css.
 // TODO: limit snap to boundaries
 // TODO: limit keep relative position on scale on rescale
-// TODO: if enum, only ever snap limit to boundaries
-// TODO: limit visual hover effects
-// TODO: check scale for even if no cell is drawn
-// TODO: total should be rownumber, so percentages are of patients, not of data points
+// TODO: if enum, only ever snap limit to boundaries (how to act on sort change on rescale??)
+// TODO: tooltip show all data?
+// TODO: busy flag to avoid painting while scale repainting?
 
 #vielleicht
 // TODO: remove css? At least everything not pertaining specifically to the presentation?

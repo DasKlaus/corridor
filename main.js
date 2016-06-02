@@ -4,8 +4,10 @@
    Calling init with data and structure
 */
 
+// TODO: add all columns
+// TODO: select a column and configure dataStructure
 // TODO: remove css? At least everything not pertaining specifically to the presentation?
-// TODO: make these configurable and responding to resize
+// TODO: make these responding to resize
 // TODO: make number type for data instead of ints and floats
 /* Initialization of the main object 
    it holds the default values for all configurable 
@@ -16,6 +18,7 @@ corridor = {
 	cellDrawSpeed: 50, // ms for each cell placement
 	activeCell: "#000", // standard color of cells
 	inactiveCell: "#ddd", // color of cells outside placed limits
+	hoverCell: "#f30", // color of cells on mouseover
 	data: new Array(),
 	structure: new Array(),
 	controllerId: "controller" // id of html object for form elements
@@ -27,6 +30,7 @@ function getStructure() {
 	// TODO: enter structure for data
 	// TODO: when finished, call init again with data and structure
 	// TODO: in HTML make checkbox if data generation should provide structure or not
+	init(corridor.data, structure);
 }
 
 // TODO: init should be called corridor and return the object, so it could be used like corridor().blablubb etc
@@ -147,8 +151,6 @@ function drawCell(data, svg, row, column) {
 			var limit = 0;
 			cells.each(function() {if (d3.select(this).attr("limit")) limit += parseInt(d3.select(this).attr("limit"));});
 			var limited = (limit>0);
-			/*var limited = (d3.sum(d3.selectAll(".cell[cellid='"+row+"']")[0], function(d) {				
-				return (d3.select(d).attr("limit"))?parseInt(d3.select(d).attr("limit")):0;})>0);*/
 			if (limited) {
 				// deactivate this cell
 				d3.select(this).style("fill",corridor.inactiveCell);
@@ -164,7 +166,6 @@ function drawCell(data, svg, row, column) {
 			return 0;
 		})
 		// on hover show tooltip and highlight all cells of this row
-		// TODO: don't do this in css, because no color management in css.
 		.on("mouseover", function() {
 			// show tooltip
 			var tooltipPositionMatrix = this.getScreenCTM().translate(+ this.getAttribute("cx"), + this.getAttribute("cy"));
@@ -175,16 +176,24 @@ function drawCell(data, svg, row, column) {
 				.style("left",(window.pageXOffset + tooltipPositionMatrix.e)+"px")
 				.text(tooltiptext);
 			// highlight all cells of this row
-			d3.selectAll(".cell[cellid='"+row+"']").attr("class", "cell hover").attr("r",5);
+			d3.selectAll(".cell[cellid='"+row+"']").style("fill",corridor.hoverCell).attr("r",5);
 		})
 		.on("mouseout", function() {
 			// hide tooltip
 			d3.select(".tooltip").style("display","none");
 			// remove hover class and restore original radius
-			d3.selectAll(".cell[cellid='"+row+"']").attr("class", "cell").attr("r", function(){
+			var cells = d3.selectAll(".cell[cellid='"+row+"']");
+			cells.attr("r", function(){
 				var thisRadius = d3.select("svg[column='"+d3.select(this).attr("column")+"']").attr("radius");				
 				return (thisRadius>0)?thisRadius:1;
 			});
+			// find out if this cell is limited to determine color
+			var limit = 0;
+			cells.each(function() {if (d3.select(this).attr("limit")) limit += parseInt(d3.select(this).attr("limit"));});
+			var limited = (limit>0);
+			cells.style("fill", function() {
+				return (limited)?corridor.inactiveCell:corridor.activeCell;
+			})
 		});
 	collide(cell, svg); // collision detection - refine placement if colliding
 }
@@ -455,10 +464,10 @@ function checkScale(structure, data, svg) {
 		default: if (data>structure.min && data<structure.max) return; // no change in scale
 			if (data <= structure.min) { // set a new minimum at 5% of domain below actual minimum
 				// if minimum value is close to zero, start the scale at zero
-				structure.min = (data>0 && data<(structure.max-data) * 0.25)?0:roundNice(data-(structure.max-data)*0.1, structure.max-data); // TODO: round to something nice
+				structure.min = (data>0 && data<(structure.max-data) * 0.25)?0:roundNice(data-(structure.max-data)*0.1, structure.max-data); // round to something nice
 			}
 			if (data >= structure.max) { // set a new maximum at 5% of domain above actual maximum
-				structure.max = roundNice(data+(data-structure.min)*0.1, data-structure.min); // TODO: round to something nice
+				structure.max = roundNice(data+(data-structure.min)*0.1, data-structure.min); // round to something nice
 			}
 			structure.scale.domain([structure.min, structure.max]);
 			drawAxis(structure, svg); // redraw axis

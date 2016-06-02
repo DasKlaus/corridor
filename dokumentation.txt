@@ -186,9 +186,6 @@ Kundendokumentation in Projekt selbst einbauen
 Dokumentation in Libre Office kopieren und formatieren
 Tabellen und Grafiken für Dokumentation erstellen
 // TODO: nest functions into object, so there's no accidental overloading when using this as a library
-// TODO: limit snap to boundaries
-// TODO: limit keep relative position on scale on rescale
-// TODO: if enum, only ever snap limit to boundaries (how to act on sort change on rescale??)
 // TODO: tooltip show all data?
 // TODO: busy flag to avoid painting while scale repainting?
 

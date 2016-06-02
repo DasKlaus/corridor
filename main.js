@@ -8,7 +8,7 @@
    it holds the default values for all configurable 
 */
 corridor = {
-	columnHeight: window.innerHeight -200, // -80 for the header, -20 for some space at the bottom, -100 for labels etc
+	columnHeight: window.innerHeight -200, // -80 for the header, -20 for some space at the bottom, -100 for labels
 	columnWidth: 100,
 	cellDrawSpeed: 50, // ms for each cell placement
 	activeCell: "#000", // standard color of cells
@@ -95,19 +95,21 @@ function drawColumn(select) {
 		.attr("transform", "translate("+(corridor.columnWidth/2+50)+","+(corridor.columnHeight+80)+")")
 		.attr("class", "empty").text("");
 	// draw sliders
-	slide = d3.behavior.drag()
+	sliding = d3.behavior.drag()
 	    .on("dragstart", function(){
 		d3.select(this).attr("class", "slider dragging");
 		corridor.busy = true;
 	    })
 	    .on("drag", function(){
+		var svg = d3.select(this.parentNode);
 		// get cutoff and get other cutoff boundary
 		if (d3.mouse(this.parentNode)[0]<0 || d3.mouse(this.parentNode)[0]>corridor.columnWidth+50) return; // mouse x coordinates out of bounds		
 		var target = d3.mouse(this.parentNode)[1]; // mouse y coordinate relative to the svg
-		// snap to boundary, if close to one WIP
 		switch (corridor.structure[column].type) {
+			// snap to nearest boundary			
 			case "enum":
-				var boundaries = corridor.structure[column].boundaries; 
+				var boundary = nearestBoundary(corridor.structure[column], target);
+				target = boundary +10;
 				break;
 			case "number": 
 		}
@@ -117,40 +119,12 @@ function drawColumn(select) {
 		var dir = d3.select(this).attr("dir"); // find out if slider is top or bottom
 		// get current boundary set by the opposite slider and limit target y accordingly
 		var limit = (dir=="top")?
-			d3.select(this.parentNode).select(".cutoff[dir='bottom']").attr("y"):
-			d3.select(this.parentNode).select(".cutoff[dir='top']").attr("height"); // top limit is off by one
+			svg.select(".cutoff[dir='bottom']").attr("y"):
+			svg.select(".cutoff[dir='top']").attr("height"); // top limit is off by one
 		if (dir=="top" && target>limit) target = limit-1;
 		if (dir=="bottom" && target<parseInt(limit)+1) target = parseInt(limit)+2; // +2 because top limit is off by one (margin owed to firefox top pixel cutoff)
-		// color cells
-		d3.select(this.parentNode).selectAll(".cell").each(function() {
-			var cellid = d3.select(this).attr("cellid");
-			var y = parseInt(d3.select(this).attr("cy"))+10; // add top padding
-			var limited = ((dir=="top" && y>target && y<limit) || (dir=="bottom" && y>limit && y<target))?0:1; // is inactive in this column
-			d3.select(this).attr("limit",limited);
-			var cells = d3.selectAll(".cell[cellid='"+cellid+"']"); // get all cells belonging to same row
-			var otherLimits = 0;
-			cells.each(function() {if (d3.select(this).attr("limit")) otherLimits += parseInt(d3.select(this).attr("limit"));});			
-			var otherwiseLimited = (otherLimits>0); // counts all limits, not only by this column
-			if (otherwiseLimited) {
-				cells.style("fill", corridor.inactiveCell);
-			}
-			if (!otherwiseLimited) {
-				cells.style("fill", corridor.activeCell);
-			}
-		});
-		// move slider and resize corresponding cutoff rectangle
-		d3.select(this).attr("y", function(){
-			return (dir=="top")?target-5:target;
-		});
-		var svg = d3.select(this.parentNode);
-		var cutoff = svg.select(".cutoff[dir='"+dir+"']");
-			cutoff.attr("height", function(){
-					return (dir=="top")?target-1:corridor.columnHeight+20-target;
-				});
-			cutoff.attr("y", function(){
-					return (dir=="top")?1:target;
-				});
-
+		// update cells and slider position
+		slide(svg, dir, target, limit);	
 		// TODO: snap to boundaries
 		// TODO: keep relative position on scale on rescale
 		// TODO: if enum, only ever snap to boundaries, reset on rescale?
@@ -161,9 +135,9 @@ function drawColumn(select) {
 		corridor.busy = false;
 	    });
 	svg.append("rect").attr("class","cutoff").attr("dir","top").attr("x",40).attr("y",1).attr("width",corridor.columnWidth+9).attr("height",9); // margin top because first pixel cuts off in firefox
-	svg.append("rect").attr("class","slider").attr("dir","top").attr("x",41).attr("y",5).attr("width",corridor.columnWidth+7).attr("height",5).call(slide);
+	svg.append("rect").attr("class","slider").attr("dir","top").attr("x",41).attr("y",5).attr("width",corridor.columnWidth+7).attr("height",5).call(sliding);
 	svg.append("rect").attr("class","cutoff").attr("dir","bottom").attr("x",40).attr("y",corridor.columnHeight+10).attr("width",corridor.columnWidth+9).attr("height",9);
-	svg.append("rect").attr("class","slider").attr("dir","bottom").attr("x",41).attr("y",corridor.columnHeight+10).attr("width",corridor.columnWidth+7).attr("height",5).call(slide);
+	svg.append("rect").attr("class","slider").attr("dir","bottom").attr("x",41).attr("y",corridor.columnHeight+10).attr("width",corridor.columnWidth+7).attr("height",5).call(sliding);
 	// draw data
 	var row = 0;
 	var arrayindex = 0; // for data in arrays
@@ -184,7 +158,7 @@ function drawColumn(select) {
 				corridor.structure[column].none++;
 				// TODO: check scale for accurate percentages of enums
 				// output
-				svg.select(".empty").text("no value: "+corridor.structure[column].none+" ("+Math.round(corridor.structure[column].none/row*100)+"%)");
+				svg.select(".empty").text("no value: "+corridor.structure[column].none+" ("+Math.round(corridor.structure[column].none/(row+1)*100)+"%)");
 			}
 			// update counters
 			if (Array.isArray(corridor.data[row][column])) {
@@ -422,10 +396,32 @@ function checkScale(structure, data, svg, row) {
 					return enumposition(center, height, cell.attr("r"));
 				});
 			cells.attr("cx", function(){return collide(d3.select(this),svg);});
+			// snap slider to nearest boundary
+			var top = parseInt(svg.select(".cutoff[dir='top']").attr("height"))+1; // top limit is off by one
+			var bottom = svg.select(".cutoff[dir='bottom']").attr("y");
+			if (top-10>0) {
+				slide(svg, "top", nearestBoundary(structure, top)+10, nearestBoundary(structure, bottom)+10);
+			}
+			if (bottom-10<corridor.columnHeight) {
+				slide(svg, "bottom", nearestBoundary(structure, bottom)+10, nearestBoundary(structure, top)+10);
+			}
 			corridor.busy = false;
 			break;
 		case "number": if (data>structure.min && data<structure.max) return; // no change in scale
 			corridor.busy = true;
+			// check if limits are set
+			var top = parseInt(svg.select(".cutoff[dir='top']").attr("height"))+1; // top limit is off by one
+			var bottom = svg.select(".cutoff[dir='bottom']").attr("y");
+			var limits = {top: structure.max, bottom: structure.min};
+			// get value of top limit
+			if (top-10>0) {
+				var reverseScale = d3.scale.linear().domain([corridor.columnHeight, 0]).range([structure.min, structure.max]);
+				limits.top = reverseScale(top-10);
+			}
+			if (bottom-10<corridor.columnHeight) {
+				var reverseScale = d3.scale.linear().domain([corridor.columnHeight, 0]).range([structure.min, structure.max]);
+				limits.bottom = reverseScale(bottom-10);
+			}
 			if (data <= structure.min) { // set a new minimum at 5% of domain below actual minimum
 				// if minimum value is close to zero, start the scale at zero
 				structure.min = (data>0 && data<(structure.max-data) * 0.25)?0:roundNice(data-(structure.max-data)*0.15, structure.max-data); // round to something nice
@@ -438,6 +434,13 @@ function checkScale(structure, data, svg, row) {
 			// all cells drawn up to this point need to be repositioned
 			svg.selectAll(".cell").attr("cy", function() {return Math.round(corridor.structure[svg.attr("column")].scale(d3.select(this).attr("value")));});
 			svg.selectAll(".cell").attr("cx", function() {return collide(d3.select(this), svg);});
+			// now that the new scale is set, limits need to be repositioned, if set
+			if (top-10>0) {
+				slide(svg, "top", structure.scale(limits.top)+10, structure.scale(limits.bottom)+10);
+			}
+			if (bottom-10<corridor.columnHeight) {
+				slide(svg, "bottom", structure.scale(limits.bottom)+10, structure.scale(limits.top)+10);
+			}
 			corridor.busy = false;
 	}	
 }
@@ -498,6 +501,50 @@ function enumposition(center, height, radius) {
 		return value;}));
 }
 
+function nearestBoundary(structure, target) {
+	var boundaries = structure.boundaries;
+	// include top and bottom of column
+	boundaries.push(corridor.columnHeight);
+	boundaries.push(0);
+	var boundary = 0; // nearest boundary
+	for (var i=0; i<boundaries.length; i++) {
+		if (Math.abs(target+10-boundaries[i])<Math.abs(target+10-boundary))
+			boundary = boundaries[i];
+	}
+	return boundary;
+}
+				
+function slide(svg, dir, target, limit) {
+	var slider = svg.select(".slider[dir='"+dir+"']");
+	var cutoff = svg.select(".cutoff[dir='"+dir+"']");
+	// color cells
+	svg.selectAll(".cell").each(function() {
+		var cellid = d3.select(this).attr("cellid");
+		var y = parseInt(d3.select(this).attr("cy"))+10; // add top padding
+		var limited = ((dir=="top" && y>target && y<limit) || (dir=="bottom" && y>limit && y<target))?0:1; // is inactive in this column
+		d3.select(this).attr("limit",limited);
+		var cells = d3.selectAll(".cell[cellid='"+cellid+"']"); // get all cells belonging to same row
+		var otherLimits = 0;
+		cells.each(function() {if (d3.select(this).attr("limit")) otherLimits += parseInt(d3.select(this).attr("limit"));});			
+		var otherwiseLimited = (otherLimits>0); // counts all limits, not only by this column
+		if (otherwiseLimited) {
+			cells.style("fill", corridor.inactiveCell);
+		}
+		if (!otherwiseLimited) {
+			cells.style("fill", corridor.activeCell);
+		}
+	});
+	// move slider and resize corresponding cutoff rectangle
+	slider.attr("y", function(){
+		return (dir=="top")?target-5:target;
+	});
+	cutoff.attr("height", function(){
+		return (dir=="top")?target-1:corridor.columnHeight+20-target;
+	});
+	cutoff.attr("y", function(){
+		return (dir=="top")?1:target;
+	});
+}
 
 function roundNice(value, domain) {
 	// maximum rounding error is 10% of domain

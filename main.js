@@ -582,7 +582,7 @@ function slide(svg, dir, target) {
 	switch (corridor.structure[svg.attr("column")].type) {
 		// snap to nearest boundary			
 		case "enum":
-			var boundary = nearestBoundary(corridor.structure[column], target);
+			var boundary = nearestBoundary(corridor.structure[svg.attr("column")], target);
 			target = boundary +10;
 			break;
 		case "number": 

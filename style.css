@@ -32,6 +32,17 @@ h1 {
 	padding: 10px;
 }
 
+input, select {
+	display: block; 
+	width: 100%; 
+	text-align: center; 
+	box-sizing: border-box;
+}
+
+.help {
+	font-size: 12px;
+}
+
 /* graph */
 
 svg {

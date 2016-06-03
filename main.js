@@ -38,25 +38,53 @@ function init(data, structure) {
 		getStructure();
 		return;
 	}
+	// tooltip div
+	d3.select("body").append("div").attr("class", "tooltip");
+	makeButtons();
+}
+
+function makeButtons(column) {
 	var controller = d3.select("#"+corridor.controllerId);
 	// remove all children of controller
 	controller.selectAll("*").remove();
-	// button for draw speed
-	controller.append("input").attr("type","text").attr("name","cellDrawSpeed").attr("value",corridor.cellDrawSpeed).attr("onchange","corridor.cellDrawSpeed = this.value;");
-	// button for adding columns
-	columns = controller.append("select").attr("onchange", "drawColumn(this);");
-	columns.append("option").attr("value", "none").attr("disabled","disabled").append("tspan").html("draw column");
-	columns.append("option").attr("value", "all").append("tspan").html("all");
-	columns.selectAll("columns").data(corridor.structure).enter().append("option").attr("value", function(column, i) {
-			return i;
-		}).append("tspan").html(function(column) {
-			return column.name;
-		});
-	columns.selectAll("option").filter(function(d) {
-		return (undefined!=d && d.type=="id");
-	}).attr("disabled","disabled"); // disable columns of type id
-	// tooltip div
-	d3.select("body").append("div").attr("class", "tooltip");
+	if (column===undefined) {
+		controller.attr("column", "none"); // save information about current content of controller
+		// help text
+		controller.append("span").attr("class", "help").html("Now that you have data, you can draw it. <br><br>"
+			+ "Your data has several columns to choose from, but you can also draw all of them at once. <br>"
+			+ "One of them is called 'id' - you cannot draw it because it does not represent information and serves only as an identifier. "
+			+ "If you hover over a cell in the visualisation, you can see its id as well as the highlighted value.<br><br>"
+			+ "You can specify the speed at which cells are positioned. Just enter a time in milliseconds each cell should take to be drawn here:<br>");
+		// button for draw speed
+		controller.append("input").attr("type","text").attr("name","cellDrawSpeed").attr("value",corridor.cellDrawSpeed).attr("onchange","corridor.cellDrawSpeed = this.value;");
+		// button for adding columns
+		columns = controller.append("select").attr("onchange", "drawColumn(this);");
+		columns.append("option").attr("value", "none").attr("disabled","disabled").append("tspan").html("draw column");
+		columns.append("option").attr("value", "all").append("tspan").html("all");
+		columns.selectAll("columns").data(corridor.structure).enter().append("option").attr("value", function(column, i) {
+				return i;
+			}).append("tspan").html(function(column) {
+				return column.name;
+			});
+		columns.selectAll("option").filter(function(d) {
+			return (undefined!=d && d.type=="id");
+		}).attr("disabled","disabled"); // disable columns of type id
+		// help text
+		controller.append("span").attr("class", "help").html("<br><br>Try clicking on the name of a column you have drawn.");
+		return;
+	}
+	controller.attr("column", column); // save information about current content of controller
+	var structure = corridor.structure[column];
+	// help text
+	controller.append("span").attr("class", "help").html("The data in this column has "+structure.type+" values.<br><br>Change the name of this column here:");
+	// name input
+	controller.append("input").attr("type","text").attr("name","columnname").attr("value",structure.name)
+		.attr("onchange","corridor.structure["+column+"].name=this.value; drawLabels(d3.select("+'"'+"svg[column='"+column+"']"+'"'+"), "+column+")");
+	switch (structure.type) {
+		case "enum": // 
+			break;
+		case "number": // unit, min, max, boundaries
+	}
 }
 
 function drawColumn(select) {
@@ -82,15 +110,8 @@ function drawColumn(select) {
 	var chartArea = svg.append("g").attr("class","chart").attr("transform","translate(45, 10)")
 	// draw border
 	chartArea.append("path").attr("class", "border").attr("d", "M-5,0L"+(corridor.columnWidth+4)+" 0 L"+(corridor.columnWidth+4)+" "+corridor.columnHeight+" L-5,"+corridor.columnHeight);
-	// draw labels (column name, empty rows, and, if set, unit)
-	svg.append("text").style("text-anchor", "middle").style("font-weight", "bold")
-		.attr("transform", "translate("+(corridor.columnWidth/2+50)+","+(corridor.columnHeight+50)+")")
-		.text(corridor.structure[column].name); // TODO: what if too wide?
-	if (corridor.structure[column].unit) {
-		svg.append("text").style("text-anchor", "middle")
-			.attr("transform", "translate("+(corridor.columnWidth/2+50)+","+(corridor.columnHeight+80)+")")
-			.text("in "+corridor.structure[column].unit);
-	}
+	drawLabels(svg, column);
+	// empty text element for later output of rows without values
 	svg.append("text").style("text-anchor", "middle")
 		.attr("transform", "translate("+(corridor.columnWidth/2+50)+","+(corridor.columnHeight+80)+")")
 		.attr("class", "empty").text("");
@@ -179,6 +200,24 @@ function drawColumn(select) {
 			if (row >= corridor.data.length) {window.clearInterval(timer);} // selfdestruct on end of data
 		}
 	}, corridor.cellDrawSpeed);
+}
+
+function drawLabels(svg, column) {
+	svg.select(".name").remove();
+	// draw labels (column name and, if set, unit)
+	svg.append("text").attr("class","name").style("text-anchor", "middle").style("font-weight", "bold")
+		.attr("transform", "translate("+(corridor.columnWidth/2+50)+","+(corridor.columnHeight+50)+")")
+		.on("click", function(){
+			if (d3.select("#"+corridor.controllerId).attr("column")!=column) makeButtons(column);
+			else makeButtons(); // reset controller content if this column is already selected
+		})
+		.text(corridor.structure[column].name); // TODO: what if too wide?
+	if (corridor.structure[column].unit) {
+		svg.select(".unit").remove();
+		svg.append("text").attr("class","unit").style("text-anchor", "middle")
+			.attr("transform", "translate("+(corridor.columnWidth/2+50)+","+(corridor.columnHeight+80)+")")
+			.text("in "+corridor.structure[column].unit);
+	}
 }
 
 function drawCell(data, svg, row, column) {

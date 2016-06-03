@@ -187,7 +187,6 @@ Dokumentation in Libre Office kopieren und formatieren
 Tabellen und Grafiken für Dokumentation erstellen
 // TODO: nest functions into object, so there's no accidental overloading when using this as a library
 // TODO: tooltip show all data?
-// TODO: busy flag to avoid painting while scale repainting?
 
 #vielleicht
 // TODO: remove css? At least everything not pertaining specifically to the presentation?

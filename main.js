@@ -56,7 +56,8 @@ function makeButtons(column) {
 			+ "If you hover over a cell in the visualisation, you can see its id as well as the highlighted value.<br><br>"
 			+ "You can specify the speed at which cells are positioned. Just enter a time in milliseconds each cell should take to be drawn here:<br>");
 		// button for draw speed
-		controller.append("input").attr("type","text").attr("name","cellDrawSpeed").attr("value",corridor.cellDrawSpeed).attr("onchange","corridor.cellDrawSpeed = this.value;");
+		controller.append("input").attr("type","text").attr("name","cellDrawSpeed").attr("value",corridor.cellDrawSpeed)
+			.attr("onchange","corridor.cellDrawSpeed = isNaN(parseInt(this.value))?corridor.cellDrawSpeed:parseInt(this.value);");
 		// button for adding columns
 		columns = controller.append("select").attr("onchange", "drawColumn(this);");
 		columns.append("option").attr("value", "none").attr("disabled","disabled").append("tspan").html("draw column");
@@ -70,7 +71,8 @@ function makeButtons(column) {
 			return (undefined!=d && d.type=="id");
 		}).attr("disabled","disabled"); // disable columns of type id
 		// help text
-		controller.append("span").attr("class", "help").html("<br><br>Try clicking on the name of a column you have drawn.");
+		controller.append("span").attr("class", "help").html("<br><br>Try clicking on the name of a column you have drawn "
+			+ "or moving the grey bars at the top and bottom of the chart via drag and drop.");
 		return;
 	}
 	controller.attr("column", column); // save information about current content of controller
@@ -81,9 +83,22 @@ function makeButtons(column) {
 	controller.append("input").attr("type","text").attr("name","columnname").attr("value",structure.name)
 		.attr("onchange","corridor.structure["+column+"].name=this.value; drawLabels(d3.select("+'"'+"svg[column='"+column+"']"+'"'+"), "+column+")");
 	switch (structure.type) {
-		case "enum": // 
-			break;
+		case "enum": break; // no more configuration possible for enums
 		case "number": // unit, min, max, boundaries
+			// unit
+			controller.append("span").attr("class", "help").html("<br><br>Change the unit of values in this column here:");
+			controller.append("input").attr("type","text").attr("name","columnunit").attr("value",structure.unit)
+				.attr("onchange","corridor.structure["+column+"].unit=this.value; drawLabels(d3.select("+'"'+"svg[column='"+column+"']"+'"'+"), "+column+")");
+			// min and max
+			controller.append("span").attr("class", "help").html("<br><br>Change the displayed minimum and maximum of the y-axis scale here "
+				+ "(this will not change the values themselves, just their position on the scale).<br><br>Minimum:");
+			controller.append("input").attr("type","text").attr("name","columnmin").attr("value",structure.min)
+				.attr("onchange","corridor.structure["+column+"].min=isNaN(parseInt(this.value))?corridor.structure["+column+"].min:parseInt(this.value); changeScale(d3.select("+'"'+"svg[column='"+column+"']"+'"'+"), corridor.structure["+column+"])");
+			controller.append("span").attr("class", "help").html("<br>Maximum:");
+			controller.append("input").attr("type","text").attr("name","columnmax").attr("value",structure.max)
+				.attr("onchange","corridor.structure["+column+"].max=isNaN(parseInt(this.value))?corridor.structure["+column+"].max:parseInt(this.value); changeScale(d3.select("+'"'+"svg[column='"+column+"']"+'"'+"), corridor.structure["+column+"])");
+			
+	
 	}
 }
 
@@ -126,30 +141,8 @@ function drawColumn(select) {
 		// get cutoff and get other cutoff boundary
 		if (d3.mouse(this.parentNode)[0]<0 || d3.mouse(this.parentNode)[0]>corridor.columnWidth+50) return; // mouse x coordinates out of bounds		
 		var target = d3.mouse(this.parentNode)[1]; // mouse y coordinate relative to the svg
-		switch (corridor.structure[column].type) {
-			// snap to nearest boundary			
-			case "enum":
-				var boundary = nearestBoundary(corridor.structure[column], target);
-				target = boundary +10;
-				break;
-			case "number": 
-		}
-		// limit target y to actual chart area
-		if (target < 10) target = 10;
-		if (target > corridor.columnHeight+10) target = corridor.columnHeight+10;
 		var dir = d3.select(this).attr("dir"); // find out if slider is top or bottom
-		// get current boundary set by the opposite slider and limit target y accordingly
-		var limit = (dir=="top")?
-			svg.select(".cutoff[dir='bottom']").attr("y"):
-			svg.select(".cutoff[dir='top']").attr("height"); // top limit is off by one
-		if (dir=="top" && target>limit) target = limit-1;
-		if (dir=="bottom" && target<parseInt(limit)+1) target = parseInt(limit)+2; // +2 because top limit is off by one (margin owed to firefox top pixel cutoff)
-		// update cells and slider position
-		slide(svg, dir, target, limit);	
-		// TODO: snap to boundaries
-		// TODO: keep relative position on scale on rescale
-		// TODO: if enum, only ever snap to boundaries, reset on rescale?
-		
+		slide(svg, dir, target);
 	    })
 	    .on("dragend", function(){
 		d3.select(this).attr("class", "slider");
@@ -295,7 +288,7 @@ function drawCell(data, svg, row, column) {
 			var limited = (limit>0);
 			cells.style("fill", function() {
 				return (limited)?corridor.inactiveCell:corridor.activeCell;
-			})
+			});
 		});
 	collide(cell, svg); // collision detection - refine placement if colliding
 }
@@ -388,6 +381,28 @@ function checkScale(structure, data, svg, row) {
 				valueData = {value: data, total: 1, percent: 0, offset: 0}; // percentages and offsets will be recalculated, anyway
 				structure.values.push(valueData);
 			}
+			changeScale(svg, structure);
+			break;
+		case "number": if (data>structure.min && data<structure.max) return; // no change in scale
+			if (data <= structure.min) { // set a new minimum at 5% of domain below actual minimum
+				// if minimum value is close to zero, start the scale at zero
+				structure.min = (data>0 && data<(structure.max-data) * 0.25)?0:roundNice(data-(structure.max-data)*0.15, structure.max-data); // round to something nice
+			}
+			if (data >= structure.max) { // set a new maximum at 5% of domain above actual maximum
+				structure.max = roundNice(data+(data-structure.min)*0.15, data-structure.min); // round to something nice
+			}
+			// update inputs, if displayed
+			if (d3.select("#"+corridor.controllerId).attr("column")==svg.attr("column")) {
+				d3.select("input[name='columnmin']").attr("value", structure.min);
+				d3.select("input[name='columnmax']").attr("value", structure.max);
+			}
+			changeScale(svg, structure);
+	}	
+}
+
+function changeScale(svg, structure) {
+	switch (structure.type) {
+		case "enum": 
 			corridor.busy = true;
 			// recalculate percentages
 			var total = 0; // total percentages
@@ -446,42 +461,50 @@ function checkScale(structure, data, svg, row) {
 			}
 			corridor.busy = false;
 			break;
-		case "number": if (data>structure.min && data<structure.max) return; // no change in scale
+		case "number": 
 			corridor.busy = true;
+			var oldmin = structure.scale.domain()[0];
+			var oldmax = structure.scale.domain()[1];
 			// check if limits are set
 			var top = parseInt(svg.select(".cutoff[dir='top']").attr("height"))+1; // top limit is off by one
 			var bottom = svg.select(".cutoff[dir='bottom']").attr("y");
-			var limits = {top: structure.max, bottom: structure.min};
+			var limits = {top: oldmax, bottom: oldmin};
 			// get value of top limit
 			if (top-10>0) {
-				var reverseScale = d3.scale.linear().domain([corridor.columnHeight, 0]).range([structure.min, structure.max]);
+				var reverseScale = d3.scale.linear().domain([corridor.columnHeight, 0]).range([oldmin, oldmax]);
 				limits.top = reverseScale(top-10);
 			}
 			if (bottom-10<corridor.columnHeight) {
-				var reverseScale = d3.scale.linear().domain([corridor.columnHeight, 0]).range([structure.min, structure.max]);
+				var reverseScale = d3.scale.linear().domain([corridor.columnHeight, 0]).range([oldmin, oldmax]);
 				limits.bottom = reverseScale(bottom-10);
-			}
-			if (data <= structure.min) { // set a new minimum at 5% of domain below actual minimum
-				// if minimum value is close to zero, start the scale at zero
-				structure.min = (data>0 && data<(structure.max-data) * 0.25)?0:roundNice(data-(structure.max-data)*0.15, structure.max-data); // round to something nice
-			}
-			if (data >= structure.max) { // set a new maximum at 5% of domain above actual maximum
-				structure.max = roundNice(data+(data-structure.min)*0.15, data-structure.min); // round to something nice
 			}
 			structure.scale.domain([structure.min, structure.max]);
 			drawAxis(structure, svg); // redraw axis
 			// all cells drawn up to this point need to be repositioned
-			svg.selectAll(".cell").attr("cy", function() {return Math.round(corridor.structure[svg.attr("column")].scale(d3.select(this).attr("value")));});
-			svg.selectAll(".cell").attr("cx", function() {return collide(d3.select(this), svg);});
+			var cutoff = false; // flag for cells out of bounds - if true, limits need to be recalculated
+			svg.selectAll(".cell").attr("cy", function() {
+				result = Math.round(corridor.structure[svg.attr("column")].scale(d3.select(this).attr("value")));
+				// check if cell is out of bounds
+				if (result>corridor.columnHeight || result<0) {
+					d3.select(this).style("display", "none");
+					cutoff = true;
+				}
+				else d3.select(this).style("display", "unset"); // make sure it's displayed otherwise
+				return Math.round(corridor.structure[svg.attr("column")].scale(d3.select(this).attr("value")));
+			}).attr("cx", corridor.columnWidth+parseInt(svg.attr("radius"))); // set x out of bounds
+			// recalculate new x
+			svg.selectAll(".cell").attr("cx", function() {
+				return collide(d3.select(this), svg);
+			});
 			// now that the new scale is set, limits need to be repositioned, if set
-			if (top-10>0) {
+			if (top-10>0 || cutoff) {
 				slide(svg, "top", structure.scale(limits.top)+10, structure.scale(limits.bottom)+10);
 			}
-			if (bottom-10<corridor.columnHeight) {
+			if (bottom-10<corridor.columnHeight || cutoff) {
 				slide(svg, "bottom", structure.scale(limits.bottom)+10, structure.scale(limits.top)+10);
 			}
 			corridor.busy = false;
-	}	
+	}
 }
 
 function reduceRadius(radius, svg) {
@@ -547,15 +570,32 @@ function nearestBoundary(structure, target) {
 	boundaries.push(0);
 	var boundary = 0; // nearest boundary
 	for (var i=0; i<boundaries.length; i++) {
-		if (Math.abs(target+10-boundaries[i])<Math.abs(target+10-boundary))
+		if (Math.abs(parseInt(target)+10-boundaries[i])<Math.abs(parseInt(target)+10-boundary))
 			boundary = boundaries[i];
 	}
 	return boundary;
 }
 				
-function slide(svg, dir, target, limit) {
+function slide(svg, dir, target) {
 	var slider = svg.select(".slider[dir='"+dir+"']");
 	var cutoff = svg.select(".cutoff[dir='"+dir+"']");
+	switch (corridor.structure[svg.attr("column")].type) {
+		// snap to nearest boundary			
+		case "enum":
+			var boundary = nearestBoundary(corridor.structure[column], target);
+			target = boundary +10;
+			break;
+		case "number": 
+	}
+	// limit target y to actual chart area
+	if (target < 10) target = 10;
+	if (target > corridor.columnHeight+10) target = corridor.columnHeight+10;
+	// get current boundary set by the opposite slider and limit target y accordingly
+	var limit = (dir=="top")?
+		svg.select(".cutoff[dir='bottom']").attr("y"):
+		svg.select(".cutoff[dir='top']").attr("height"); // top limit is off by one
+	if (dir=="top" && target>limit) target = limit-1;
+	if (dir=="bottom" && target<parseInt(limit)+1) target = parseInt(limit)+2; // +2 because top limit is off by one (margin owed to firefox top pixel cutoff)
 	// color cells
 	svg.selectAll(".cell").each(function() {
 		var cellid = d3.select(this).attr("cellid");

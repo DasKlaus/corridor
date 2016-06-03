@@ -60,6 +60,10 @@ svg {
 	font-size: 10px;
 }
 
+text.name {
+	cursor: pointer;
+}
+
 .boundary {
 	stroke-width: 1; 
 	stroke-dasharray: 1,2; 

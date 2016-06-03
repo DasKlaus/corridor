@@ -4,23 +4,6 @@
 */
 
 
-
-// TODO: function to skew Gauss curve towards one side
-// TODO: dates as datatype
-
-// make data
-// similar to Kapro data because familarity
-// id (int)
-// name (string) (?)
-// age (int)
-// sex (enum)
-// medication (array)
-// diagnoses (array)
-// risk factors (array)
-// some number array - reduction by apheresis treatment?
-// lp(a), LDL, HDL, Trig (float)
-
-
 // create data
 function makeData(size) {
 	var size = parseInt(size) || 100;
@@ -33,9 +16,8 @@ function makeData(size) {
 		var diagnoses = makeDiagnoses(age, sex, medication);
 		var riskfactors = makeRiskfactors(age, sex, medication);
 		var lpa = makeLpa(diagnoses, riskfactors); // lipoprotein a
-		var ldl = makeLdl(diagnoses, riskfactors); // low density lipids
-		var hdl = makeHdl(ldl, age); // high density lipids
-		// TODO: more
+		var ldl = makeLdl(diagnoses, riskfactors); // low density lipoproteins
+		var hdl = makeHdl(ldl, age); // high density lipoproteins
 
 		data.push([id, age, sex, medication, diagnoses, riskfactors, lpa, ldl, hdl]);
 
@@ -67,7 +49,7 @@ function makeMedication(age, sex) {
 	var sex = (sex=="female")?1:0;
 	var meds = new Array();
 	meds = addElement(meds, "Bisoprolol", age/3); // beta blocker for old patients
-	meds = addElement(meds, "Simvastatin", 10+20*sex); // statines randomly, more likely if female
+	meds = addElement(meds, "Simvastatin", 10+20*sex); // more likely if female
 	if (meds.indexOf("Simvastatin")<0) meds = addElement(meds, "Atorvastatin", 20); // if no statine yet
 	meds = addElement(meds, "Ezetrol", 10); // cholesterine resorption inhibitor
 	meds = addElement(meds, "Insulin", 14); // insulin for diabetes

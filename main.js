@@ -18,6 +18,7 @@ corridor = {
 	data: new Array(),
 	structure: new Array(),
 	controllerId: "controller", // id of html object for form elements
+	contentId: "content" // id of html object for svgs
 	busy: false // flag for interrupting timer if scales are recalculated etc
 };
 
@@ -125,7 +126,7 @@ corridor.drawColumn = function(select) {
 	var radius = 5; // starting radius
 	if (d3.select(".column[column='"+column+"']").size()>0) return; // return if column already drawn
 	// create svg
-	var svg = d3.select("body").append("svg").attr("width",corridor.columnWidth+50).attr("height",corridor.columnHeight+100)
+	var svg = d3.select("#"+corridor.contentId).append("svg").attr("width",corridor.columnWidth+50).attr("height",corridor.columnHeight+100)
 		.attr("class","column")
 		.attr("column", column)
 		.attr("radius", radius);

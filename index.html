@@ -15,10 +15,14 @@
 <br>A tool for visualizing correlations in complex data</span>
 <div id="controller">
 	<span class="help">Welcome!<br><br>
-	Corridor is a tool for data visualisation. To begin, let us generate some data!<br><br>
+	Corridor is a tool for data visualisation. <br><br>
+	Please note that corridor may not run on old browsers or Internet Explorer. It is recommended you use 
+	the newest firefox to proceed.
+	<br>To begin, let us generate some data!<br><br>
 	Number of datasets to generate:</span><br>
 	<input type="text" name="dataSize" value="250" id="dataSize">
 	<input type="button" name="makeData" value="generate data" onClick="var dataSize = isNaN(parseInt(this.value))?250:parseInt(this.value); makeData(dataSize);">
 </div>
+<div id="content"></div>
 </body>
 </html>

@@ -18,7 +18,7 @@ corridor = {
 	data: new Array(),
 	structure: new Array(),
 	controllerId: "controller", // id of html object for form elements
-	contentId: "content" // id of html object for svgs
+	contentId: "content", // id of html object for svgs
 	busy: false // flag for interrupting timer if scales are recalculated etc
 };
 
@@ -283,12 +283,16 @@ corridor.drawCell = function(data, svg, row, column) {
 		.on("mouseover", function() {
 			// show tooltip
 			var tooltipPositionMatrix = this.getScreenCTM().translate(+ this.getAttribute("cx"), + this.getAttribute("cy"));
-			var tooltiptext = row+", "+data;
+			var value = data;
+			// trim the number to at most 4 meaningful digits
+			// Number conversion to get rid of scientific notation and trailing zeroes
+			if (corridor.structure[column].type=="number") value = Number(value.toPrecision(4)); 
+			var tooltiptext = "ID: "+row+"<br>"+corridor.structure[column].name+": "+value;
 			if (corridor.structure[column].unit) tooltiptext += " "+corridor.structure[column].unit;
 			d3.select(".tooltip").style("display","block")
 				.style("top",(window.pageYOffset + tooltipPositionMatrix.f)+"px")
 				.style("left",(window.pageXOffset + tooltipPositionMatrix.e)+"px")
-				.text(tooltiptext);
+				.html(tooltiptext);
 			// highlight all cells of this row
 			d3.selectAll(".cell[cellid='"+row+"']").style("fill",corridor.hoverCell).attr("r",5);
 		})

@@ -235,12 +235,12 @@ corridor.drawLabels = function(svg, column) {
    Sets position, radius, value, limit and hover behaviour
 */
 corridor.drawCell = function(data, svg, row, column) {
-	var radius = svg.attr("radius"); // a radius of zero is still drawn as a pixel, but without a pixel distance in between
 	// check if scale is set and still correct
 	corridor.checkScale(corridor.structure[column], data, svg, row);
 	var scale = corridor.structure[column].scale;
 	d3.select("svg[column='"+column+"'] .chart").append("circle")
-		.attr("r", function(){return (radius>0)?radius:1;})
+		// a radius of zero is still drawn as a pixel, but without a pixel distance in between		
+		.attr("r", function(){return (svg.attr("radius")>0)?svg.attr("radius"):1;})
 		.attr("class", "cell")
 		.attr("value", data)
 		.attr("cellid", row)
@@ -249,7 +249,7 @@ corridor.drawCell = function(data, svg, row, column) {
 			switch(corridor.structure[column].type) {
 				case "enum":
 					// place cell randomly in a Gaussian distribution in the area
-					return corridor.enumPosition(scale(data)[0], scale(data)[1], radius);
+					return corridor.enumPosition(scale(data)[0], scale(data)[1], svg.attr("radius"));
 					break;
 				case "number":
 					// place cell at exact value
@@ -607,7 +607,7 @@ corridor.getCollidors = function(cellsInRow, x, radius) {
    Gaussian distribution
 */
 corridor.enumPosition = function(center, height, radius) {
-	return Math.round(corridor.makeGauss(center, height/6-2*radius, function(value){
+	return Math.round(corridor.makeGauss(center, (height-2*radius)/6, function(value){
 		// prevent value from deviating outside of the placement area
 		while (value>3 || value<-3) {
 			value = value/2;

@@ -20,6 +20,8 @@ h1 {
 	font-weight: bold;
 }
 
+#content {white-space: nowrap;}
+
 /* user interface */
 
 #controller {
@@ -46,7 +48,7 @@ input, select {
 /* graph */
 
 svg {
-	float: left; 
+	display: inline-block;
 	margin-right: 5px;
 }
 

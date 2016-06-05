@@ -709,6 +709,7 @@ corridor.makeRandom = function() {
 /*
    Returns a random number with Gaussian distribution
    This is an adaptation of the Java implementation of nextGaussian
+   (which uses the marsaglia polar method)
    Mean, standard deviation and a function for further processing are optional parameters 
 */
 // Gaussian numbers come in pairs, so one has to be kept in storage

@@ -178,27 +178,35 @@ Die Gestaltung und Formatierung der Projektdokumentation wurde nach den IHK-Rich
 
 ### Kundendokumentation (10)
 
+Zum Start des Programms wird die index.html aufgerufen. Getestet wurde das Projekt in Google Chrome 48, Mozilla Firefox 46 und Internet Explorer 11, in anderen oder älteren Browsern kann es zu Darstellungsabweichungen oder Fehlern kommen. Es wird die Verwendung von Firefox empfohlen.
 
-###TODO bis zur Abgabe
-#unbedingt
-Dokumentation fertig schreiben
-Kundendokumentation in Projekt selbst einbauen
-Dokumentation in Libre Office kopieren und formatieren
-Tabellen und Grafiken für Dokumentation erstellen
-// TODO: nest functions into object, so there's no accidental overloading when using this as a library
-// TODO: tooltip show all data?
+Ausgangszustand ist eine überwiegend leere Seite, auf der Titel und Untertitel sowie ein farbig hervorgehobener Bereich mit Text und Eingabefeldern zu sehen sind. In diesem Bereich finden sich Hinweise zur Bedienung und Formularelemente zur Konfiguration der Visualisierung. Die Hinweise sind in Englisch formuliert, da die BioArtProducts GmbH internationale Kunden hat, denen das Programm vorgestellt werden soll.
 
-#vielleicht
+Zunächst benötigt das Programm Daten, um sie darstellen zu können. Das erste Eingabefeld betrifft die Anzahl der generierten Datensätze. Die vorgegebene Standardmenge beträgt 250, empfohlen werden Eingaben zwischen 10 und 1000. Bei höheren Werten kann die Darstellung einige Zeit in Anspruch nehmen oder es zum Einfrieren des Browsers kommen.
+Mit Klicken auf den Button mit der Aufschrift "generate data" werden diese Daten generiert.
+
+Im nächsten Schritt kann im Zahlenfeld die Geschwindigkeit der Darstellung in Millisekunden pro Datenpunkt angepasst werden. Als Standard ist hier 50 vorgegeben, empfohlen wird mindestens ein Hunderstel der im vorigen Schritt eingegebenen Datensatzmenge.
+Im Auswahlfeld mit der Aufschrift "draw column" kann nun ausgewählt werden, welche Daten dargestellt werden sollen.
+Jede Spalte kann einzeln ausgewählt werden, es können jedoch auch alle Spalten auf einmal mit Auswahl der Option "all" gezeichnet werden. Wurde eine Auswahl getroffen, beginnt die Visualisierung von selbst. Die Spalte "id" kann nicht ausgewählt werden, da sie nur der eindeutigen Identifikation eines Datensatzes dient. Ihr Inhalt wird jedoch angezeigt, wenn über eine Zelle mit der Maus gefahren wird.
+
+Nun erscheint im weißen, leeren Bereich der Seite eine Säule (oder mehrere), in der in der vorher angegebenen Geschwindigkeit Punkte platziert werden. Weitere Säulen können auf die gleiche Weise hinzugefügt werden, es kann jedoch jede Spalte nur einmal dargestellt werden. Jede Säule hat eine Skala an ihrem linken Rand, auf der die Werte der Punkte abgelesen werden können. Bei numerischen Werten ist das eine lineare Skala, bei sonstigen Werten sind es Blöcke, in denen gleiche Werte zusammengefasst sind. Die Position innerhalb dieser Blöcke hat keinen Informationsgehalt - jeder Punkt ist gleichwertig zu allen anderen im gleichen Block. Die Größe, also Höhe, eines Blockes gibt Aufschluss über den Anteil der Datensätze mit einem solchen Wert, wobei ein Datensatz auch mehrere verschiedene Werte gleichzeitig haben kann. Die Anzahl der Datensätze ohne einen Wert für die betreffende Spalte wird unter dem Spaltennamen angezeigt.
+
+Klickt man auf den Titel einer Spalte, der direkt unter jeder Säule steht, erhält man weitere Konfigurationsmöglichkeiten. Über ein Eingabefeld lässt sich der Name der Spalte ändern (diese Änderung wird sichtbar, sobald der Fokus das Feld verlässt, der Nutzer also z.B. an eine andere Stelle klickt). Spalten mit numerischen Werten haben darüber hinaus noch weitere Felder, über die sich die Einheit, in der besagte Werte angegeben werden, anpassen lässt, sowie die Minimal- und Maximalwerte der Skala.
+
+Wichtigste interaktive Funktion stellen jedoch die Schieberegler dar, mit denen sich der Wertebereich einzelner Säulen eingrenzen lässt. Hierzu klickt man mit der Maus auf einen der flachen grauen Balken am oberen oder unteren Rand einer Säule und schiebt sie mit gedrückter Maustaste über die Säule. Verschwinden dabei Zellen hinter dem grauen Block, werden diese ausgegraut, ebenso wie alle anderen Zellen in dieser oder anderen Spalten, die zum selben Datensatz gehören. Auf diese Weise lässt sich erkennen, welchen Einfluss die Werte dieser Spalte auf andere Werte des gleichen Datensatzes haben. Wird zum Beispiel in der Säule für Medikamente der Bereich "Insulin" ausgegraut, sind auch alle Zellen im Bereich "Diabetes" bei den Diagnosen betroffen. Daraus lässt sich schließen, dass im Datenbestand alle Patienten mit Diabetes Insulin nehmen und umgekehrt alle Patienten, die Insulin nehmen, Diabetes haben. Grenzt man hingegen die Spalte für das Patientenalter dahingehend ein, dass Patienten unter 60 Jahren ausgeblendet werden, betrifft dies mehr männliche als weibliche Patienten, und überproportional viele, die einen niedrigen HDL-Wert haben. Solche Eingrenzungen lassen sich auch auf mehreren Spalten gleichzeitig vornehmen.
+
+###TODO
+
 // TODO: remove css? At least everything not pertaining specifically to the presentation?
-// TODO: select a column and configure dataStructure
+// TODO: boundaries of non-enums
 // TODO: make height responding to resize
 // TODO: enter structure for data
 // TODO: in HTML make checkbox if data generation should provide structure or not and get structure from UI
 // TODO: init should be called corridor and return the object, so it could be used like corridor().blablubb etc
-// TODO: limit is buggy on rescale
 // TODO: what if labels too wide?
 // TODO: requestAnimationFrame
 // TODO: if label is larger, make numbers smaller, cut off text, on hover write it out large
 // TODO: boundaries for non-enums
 // TODO: show percentages of active columns
+// TODO: percentages need to be checked on empty arrays
 

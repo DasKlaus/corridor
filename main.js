@@ -112,6 +112,8 @@ corridor.makeButtons = function(column) {
 */
 corridor.drawColumn = function(select) {
 	var column = select.value;
+	// deactivate this option in the select input
+	d3.select("#"+corridor.controllerId).select("option[value='"+column+"']").attr("disabled","disabled");
 	if (column == "all") { // draw all columns
 		for (var i=0; i<corridor.structure.length; i++) {
 			if (corridor.structure[i].type != "id") {
@@ -337,7 +339,7 @@ corridor.drawAxis = function(structure, svg) {
 			// draw boundaries
 			if (structure.boundaries) {
 				for (var i=0; i<structure.boundaries.length; i++) {
-					axis.append("path").attr("class","boundary").attr("d","M0,"+structure.boundaries[i]+"H150").attr("stroke-width", 1).attr("stroke-dasharray","1,2");
+					axis.append("path").attr("class","boundary").attr("d","M0,"+structure.boundaries[i]+"H"+(corridor.columnWidth+10)).attr("stroke-width", 1).attr("stroke-dasharray","1,2");
 				}
 			}
 			break;
@@ -582,12 +584,12 @@ corridor.collide = function(cell, svg) {
 		deviation = (deviation>0)?deviation*-1:(deviation*-1)+1; // alternate sides
 	}
 	// if not enough space to place cell, reduce radius
-	if (Math.abs(deviation)>corridor.columnWidth/2-2*radius) {
+	if (Math.abs(deviation)>corridor.columnWidth/2-2*radius+5) {
 		corridor.reduceRadius(radius, svg);
 		// do it again from start, because now all x values have been reset.
 		return corridor.collide(cell, svg);
 	}
-	return (center+deviation);
+	return center+deviation;
 }
 
 /*

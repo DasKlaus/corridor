@@ -3,6 +3,62 @@
   It provides example data with approximate realistic distributions and dependencies.
 */
 
+/*
+   Imports data from a specified csv file
+*/
+function getCsvData(path) {
+	// use d3 to convert csv data into an object
+	var parser = d3.dsv(";", "text/plain; charset=ISO-8859-1");
+	parser(path, getObjectData); // callback getObjectData for conversion into array and creation of structure
+}
+
+/*
+   Imports data from an object list
+*/
+function getObjectData(objectData) {
+	var structure = new Array();
+	var data = new Array();
+	// property names go in data structure, values in data array
+	var keys = Object.keys(objectData[0]);
+	for(var key in keys) {
+		if (objectData[0].hasOwnProperty(keys[key])) {
+			// property name that goes into structure
+			structure.push({name: keys[key], type: "number"});
+		}
+	}
+	// loop over data
+	for(var row in objectData) {
+		var rowData = new Array();
+		for(var key in structure) {
+			var value = objectData[row][structure[key].name];
+			if (value == "") {
+				value = null;
+			}
+			else if (structure[key].type=="number" && parseFloat(value) != value) {
+				num = value.replace(",", ".");
+				if (parseFloat(num) != num) { 
+					structure[key].type="enum";
+					console.log(value);
+				} 
+				else {
+					value = parseFloat(num);
+				}
+			}
+			else if (structure[key].type=="number") {
+				value = parseFloat(value);
+			} 
+			rowData.push(value);
+		}
+		data.push(rowData);
+	}
+	// parse units from names where possible
+	// type is number by default
+	// if name contains "plz" or something, type is enum
+	// if value is not empty or a number, then type is enum
+	// count possible values for enums: if there are no or few duplicates, type is id
+
+	corridor.init(data, structure);
+}
 
 /*
    Creates data of specified length and provides dataStructure
@@ -24,7 +80,7 @@ function makeData(size) {
 		data.push([id, age, sex, medication, diagnoses, riskfactors, lpa, ldl, hdl]);
 
 		// describe data
-		var dataStructure = new Array(
+		var structure = new Array(
 			{name: "Id", type: "id"},
 			{name: "Age", type: "number", unit: "years"},
 			{name: "Sex", type: "enum"},
@@ -36,7 +92,7 @@ function makeData(size) {
 			{name: "HDL", type: "number", unit: "mg/dl"}
 		);
 	}
-	corridor.init(data, dataStructure);
+	corridor.init(data, structure);
 }
 
 /*

@@ -25,6 +25,8 @@
 		onClick="var dataSize = isNaN(parseInt(document.getElementById('dataSize').value))?
 			250:parseInt(document.getElementById('dataSize').value); 
 			makeData(dataSize);">
+	<input type="button" name="getData" value="get data from data.csv"
+		onClick="getCsvData('data.csv');">
 </div>
 <div id="content"></div>
 </body>

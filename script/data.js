@@ -22,8 +22,14 @@ function getObjectData(objectData) {
 	var keys = Object.keys(objectData[0]);
 	for(var key in keys) {
 		if (objectData[0].hasOwnProperty(keys[key])) {
-			// property name that goes into structure
-			structure.push({name: keys[key], type: "number"});
+			// create structure object for this key
+			var obj = {name: keys[key], type: "number"}; // type is number by default
+			// parse unit from name if set in parantheses
+			if (obj.name.endsWith(")") && obj.name.indexOf(" (")>0) {
+				obj.unit = obj.name.substr(obj.name.indexOf(" ("));
+				obj.name = obj.name.substr(0, obj.name.indexOf(" ("));
+			}
+			structure.push(obj);
 		}
 	}
 	// loop over data
@@ -31,14 +37,14 @@ function getObjectData(objectData) {
 		var rowData = new Array();
 		for(var key in structure) {
 			var value = objectData[row][structure[key].name];
-			if (value == "") {
+			if (value == "" || value == undefined) {
 				value = null;
 			}
+			// if value is not empty or a number, then type is enum
 			else if (structure[key].type=="number" && parseFloat(value) != value) {
 				num = value.replace(",", ".");
 				if (parseFloat(num) != num) { 
 					structure[key].type="enum";
-					console.log(value);
 				} 
 				else {
 					value = parseFloat(num);
@@ -51,13 +57,23 @@ function getObjectData(objectData) {
 		}
 		data.push(rowData);
 	}
-	// parse units from names where possible
-	// type is number by default
-	// if name contains "plz" or something, type is enum
-	// if value is not empty or a number, then type is enum
-	// count possible values for enums: if there are no or few duplicates, type is id
+	getStructure(data, structure);
+}
 
-	corridor.init(data, structure);
+/*
+   Get structure via user input
+*/
+function getStructure(data, structure) {
+	if (structure == undefined) {
+		// create basic structure
+		structure = new Array();
+		for (var i=0; i<data[0].length; i++) {
+			structure.push({name: "Column "+i, type: "number"});
+		}
+	}
+	corridor.data = data;
+	corridor.structure = structure;
+	corridor.makeButtons(0);
 }
 
 /*

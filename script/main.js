@@ -1,3 +1,13 @@
+// TODO: better looping
+// TODO: change svg in copy and only redraw every so and so frames
+// TODO: group enums with low percentages
+// TODO: tooltip should show all values for that column, or all values for that patient
+// TODO: date format
+// TODO: sort selected and unselected values in x-axis (switch)
+// TODO: show value on sliders
+// TODO: labels
+// TODO: transparency for radius zero reached
+
 /*
    This is the main program.
    This file should stand alone when used in other projects.
@@ -72,13 +82,57 @@ corridor.makeButtons = function(column) {
 	}
 	controller.attr("column", column); // save information about current content of controller
 	var structure = corridor.structure[column];
+	// check if this column has been drawn yet
+	var svg = (d3.select(".column[column='"+column+"']")[0][0]!=null);
+	// button for next column or finishing structure definition
+	if (!svg) {
+		var finished = corridor.data[0].length<=parseInt(column)+1;
+		controller.append("input").attr("type", "button").attr("name", "nextColumn").attr("value", "define next column").on("click", function() {
+			if (finished) corridor.init(corridor.data, corridor.structure);
+			else corridor.makeButtons(parseInt(column)+1);
+		});
+	}
+	if (svg) {
+		// help text
+		controller.append("span").attr("class", "help").html("The data in this column has "+structure.type+" values.");
+	} else {
+		// help text
+		controller.append("span").attr("class", "help").html("Please specify what type of values this column represents:");
+		// type input
+		var typeInput = controller.append("select").attr("name","columntype").on("change", function() {
+			corridor.structure[column].type=this.value;
+			corridor.makeButtons(column);
+		});
+		for (var i=0; i<3; i++) {
+			var type = Array("id", "number", "enum")[i];
+			var option = typeInput.append("option").attr("value", type);
+			if (type == structure.type) option.attr("selected","selected");
+			option.append("tspan").html(type)
+		}
+		// typeInput.attr("value", structure.type);
+		// help text
+		// get typical values
+		var values = new Array();
+		var i = 0;
+		while (values.length<10 && i<corridor.data.length)
+		{
+			var value = corridor.data[i][column];
+			if (Array.isArray(value)) {value = (value.length>0)?value[0]:null;}
+			if (value!="" && value != null && value != undefined) values.push(value);
+			i++;
+		}
+		if (values.length>0) {
+			values.join(", ");
+			controller.append("span").attr("class", "help").html("Typical values for this column are "+values+".");
+		}
+	}
 	// help text
-	controller.append("span").attr("class", "help").html("The data in this column has "+structure.type+" values.<br><br>Change the name of this column here:");
+	controller.append("span").attr("class", "help").html("<br><br>Change the name of this column here:");
 	// name input
 	controller.append("input").attr("type","text").attr("name","columnname").attr("value",structure.name)
 		.on("change", function() {
 			corridor.structure[column].name=this.value;
-			corridor.drawLabels(d3.select("svg[column='"+column+"']"), column);
+			if (svg) corridor.drawLabels(d3.select("svg[column='"+column+"']"), column);
 		});
 	switch (structure.type) {
 		case "enum": break; // no more configuration possible for enums
@@ -88,7 +142,7 @@ corridor.makeButtons = function(column) {
 			controller.append("input").attr("type","text").attr("name","columnunit").attr("value",structure.unit)
 				.on("change", function() {
 					corridor.structure[column].unit=this.value;
-					corridor.drawLabels(d3.select("svg[column='"+column+"']"), column);
+					if (svg) corridor.drawLabels(d3.select("svg[column='"+column+"']"), column);
 				});
 			// min and max
 			controller.append("span").attr("class", "help").html("<br><br>Change the displayed minimum and maximum of the y-axis scale here "
@@ -96,13 +150,13 @@ corridor.makeButtons = function(column) {
 			controller.append("input").attr("type","text").attr("name","columnmin").attr("value",structure.min)
 				.on("change", function() {
 					corridor.structure[column].min=isNaN(parseInt(this.value))?corridor.structure[column].min:parseInt(this.value);
-					corridor.changeScale(d3.select("svg[column='"+column+"']"), corridor.structure[column]);
+					if (svg) corridor.changeScale(d3.select("svg[column='"+column+"']"), corridor.structure[column]);
 				});
 			controller.append("span").attr("class", "help").html("<br>Maximum:");
 			controller.append("input").attr("type","text").attr("name","columnmax").attr("value",structure.max)
 				.on("change", function() {
 					corridor.structure[column].max=isNaN(parseInt(this.value))?corridor.structure[column].max:parseInt(this.value);
-					corridor.changeScale(d3.select("svg[column='"+column+"']"), corridor.structure[column]);
+					if (svg) corridor.changeScale(d3.select("svg[column='"+column+"']"), corridor.structure[column]);
 				});
 	}
 }
@@ -177,6 +231,10 @@ corridor.drawColumn = function(select) {
 			if (Array.isArray(data)) {
 				// if array is empty, set data to null
 				data = (arrayindex < data.length)?data[arrayindex]:null;
+			}
+			// if data should be a number but isn't, set data to null
+			if (corridor.structure[column].type == "number" && parseFloat(data) != data) {
+				data == null;
 			}
 			if (data !== undefined && data !== null) { // don't draw if value is null or undefined
 				corridor.drawCell(data, svg, row, column);

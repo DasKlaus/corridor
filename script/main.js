@@ -7,6 +7,7 @@
 // TODO: show value on sliders
 // TODO: labels
 // TODO: transparency for radius zero reached
+// TODO: configurable limit of either datasets analyzed or points drawn
 
 /*
    This is the main program.
@@ -16,7 +17,7 @@
 
 /* 
    Initialization of the main object 
-   It holds the default values for all configurable 
+   It holds the default values for all configurable variables
 */
 corridor = {
 	columnHeight: window.innerHeight -200, // -80 for the header, -20 for some space at the bottom, -100 for labels
@@ -27,8 +28,14 @@ corridor = {
 	hoverCell: "#f30", // color of cells on mouseover
 	data: new Array(),
 	structure: new Array(),
-	controllerId: "controller", // id of html object for form elements
-	contentId: "content", // id of html object for svgs
+	displayed: new Array(14,30,42,61,62,63),
+	limit: { // limits visualisation
+		data: null, // maximum datasets evaluated
+		each: 1000, // maximum points per column
+		points: 10000}, // maximum overall points
+	drawnPoints: 0,
+	controllerId: "controller", // id of html container object for form elements
+	contentId: "content", // id of html container object for svgs
 	busy: false // flag for interrupting timer if scales are recalculated etc
 };
 
@@ -36,8 +43,12 @@ corridor = {
    Initialization with data and structure
 */
 corridor.init = function(data, structure) {
-	corridor.data = data;
-	corridor.structure = structure;
+	if (data != undefined) corridor.data = data;
+	if (structure != undefined) corridor.structure = structure;
+	// draw initially displayed columns
+	for (var i=0; i<corridor.displayed.length; i++) {
+		corridor.drawColumn(corridor.displayed[i]);
+	}
 	// tooltip div
 	d3.select("body").append("div").attr("class", "tooltip");
 	corridor.makeButtons();
@@ -62,9 +73,15 @@ corridor.makeButtons = function(column) {
 			+ "You can specify the speed at which cells are positioned. Just enter a time in milliseconds each cell should take to be drawn here:<br>");
 		// button for draw speed
 		controller.append("input").attr("type","text").attr("name","cellDrawSpeed").attr("value",corridor.cellDrawSpeed)
-			.attr("onchange","corridor.cellDrawSpeed = isNaN(parseInt(this.value))?corridor.cellDrawSpeed:parseInt(this.value);");
+			.on("change", function() {
+				corridor.cellDrawSpeed = isNaN(parseInt(this.value))?corridor.cellDrawSpeed:parseInt(this.value);
+			});
 		// button for adding columns
-		columns = controller.append("select").attr("onchange", "corridor.drawColumn(this);");
+		columns = controller.append("select")
+			.attr("name", "selectColumn")
+			.on("change", function() {
+				corridor.drawColumn(this.value);
+			});
 		columns.append("option").attr("value", "none").attr("disabled","disabled").append("tspan").html("draw column");
 		columns.append("option").attr("value", "all").append("tspan").html("all");
 		columns.selectAll("columns").data(corridor.structure).enter().append("option").attr("value", function(column, i) {
@@ -87,10 +104,14 @@ corridor.makeButtons = function(column) {
 	// button for next column or finishing structure definition
 	if (!svg) {
 		var finished = corridor.data[0].length<=parseInt(column)+1;
-		controller.append("input").attr("type", "button").attr("name", "nextColumn").attr("value", "define next column").on("click", function() {
-			if (finished) corridor.init(corridor.data, corridor.structure);
-			else corridor.makeButtons(parseInt(column)+1);
+		controller.append("input").attr("type", "button").attr("name", "finish").attr("value","finished column definitions").on("click", function() {
+			corridor.init(corridor.data, corridor.structure);
 		});
+		if (!finished) {
+			controller.append("input").attr("type", "button").attr("name", "nextColumn").attr("value", "define next column").on("click", function() {
+				corridor.makeButtons(parseInt(column)+1);
+			});
+		}
 	}
 	if (svg) {
 		// help text
@@ -164,23 +185,22 @@ corridor.makeButtons = function(column) {
 /*
    Draws the column currently selected in the UI
 */
-corridor.drawColumn = function(select) {
-	var column = select.value;
+corridor.drawColumn = function(column) {
 	// deactivate this option in the select input
 	d3.select("#"+corridor.controllerId).select("option[value='"+column+"']").attr("disabled","disabled");
 	if (column == "all") { // draw all columns
 		for (var i=0; i<corridor.structure.length; i++) {
 			if (corridor.structure[i].type != "id") {
-				select.value = i;
-				corridor.drawColumn(select);
+				corridor.drawColumn(i);
 			}
 		}
 		return;
 	}
-	corridor.structure[column].none = 0; // initialize counter of rows without values	
-	select.value = "none"; // reset select
-	var radius = 5; // starting radius
 	if (d3.select(".column[column='"+column+"']").size()>0) return; // return if column already drawn
+	corridor.displayed.push(column);
+	corridor.structure[column].none = 0; // initialize counter of rows without values	
+	d3.select("#"+corridor.controllerId).select("select[name='columnSelect']").value = "none"; // reset select
+	var radius = 5; // starting radius
 	// create svg
 	var svg = d3.select("#"+corridor.contentId).append("svg").attr("width",corridor.columnWidth+50).attr("height",corridor.columnHeight+100)
 		.attr("class","column")
@@ -192,7 +212,7 @@ corridor.drawColumn = function(select) {
 	corridor.drawLabels(svg, column);
 	// empty text element for later output of rows without values
 	svg.append("text").style("text-anchor", "middle")
-		.attr("transform", "translate("+(corridor.columnWidth/2+50)+","+(corridor.columnHeight+80)+")")
+		.attr("transform", "translate("+(corridor.columnWidth/2+50)+","+(corridor.columnHeight+95)+")")
 		.attr("class", "empty").text("");
 	// set limit slider behaviour
 	sliding = d3.behavior.drag()
@@ -221,6 +241,7 @@ corridor.drawColumn = function(select) {
 	svg.append("rect").attr("class","slider").attr("dir","bottom").attr("x",41).attr("y",corridor.columnHeight+10)
 		.attr("width",corridor.columnWidth+7).attr("height",5).call(sliding);
 	// draw data
+	var points = 0; // count points drawn
 	var row = 0;
 	var arrayindex = 0; // for data in arrays
 	// set a new timer
@@ -237,6 +258,7 @@ corridor.drawColumn = function(select) {
 				data == null;
 			}
 			if (data !== undefined && data !== null) { // don't draw if value is null or undefined
+				points++;
 				corridor.drawCell(data, svg, row, column);
 			} else {
 				// count empty data for accurate percentages
@@ -260,7 +282,13 @@ corridor.drawColumn = function(select) {
 				arrayindex = 0;
 				row++;
 			}
-			if (row >= corridor.data.length) {window.clearInterval(timer);} // selfdestruct on end of data
+			if (row >= corridor.data.length // end of data reached
+				|| (corridor.limit.data != null && corridor.limit.data <= row) // limit of datasets reached
+				|| (corridor.limit.each != null && corridor.limit.each <= points) // limit of points per column reached
+				|| (corridor.limit.points != null && corridor.limit.points <= corridor.drawnPoints) // limit of overall points drawn reached
+			) {
+				window.clearInterval(timer);  // selfdestruct timer
+			}
 		}
 	}, corridor.cellDrawSpeed);
 }
@@ -283,7 +311,7 @@ corridor.drawLabels = function(svg, column) {
 	if (corridor.structure[column].unit) {
 		svg.select(".unit").remove();
 		svg.append("text").attr("class","unit").style("text-anchor", "middle")
-			.attr("transform", "translate("+(corridor.columnWidth/2+50)+","+(corridor.columnHeight+80)+")")
+			.attr("transform", "translate("+(corridor.columnWidth/2+50)+","+(corridor.columnHeight+70)+")")
 			.text("in "+corridor.structure[column].unit);
 	}
 }
@@ -293,6 +321,7 @@ corridor.drawLabels = function(svg, column) {
    Sets position, radius, value, limit and hover behaviour
 */
 corridor.drawCell = function(data, svg, row, column) {
+	corridor.drawnPoints++;
 	// check if scale is set and still correct
 	corridor.checkScale(corridor.structure[column], data, svg, row);
 	var scale = corridor.structure[column].scale;

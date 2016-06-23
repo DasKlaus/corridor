@@ -36,7 +36,7 @@ function getObjectData(objectData) {
 	for(var row in objectData) {
 		var rowData = new Array();
 		for(var key in structure) {
-			var value = objectData[row][structure[key].name];
+			var value = objectData[row][structure[key].name+structure[key].unit];
 			if (value == "" || value == undefined) {
 				value = null;
 			}

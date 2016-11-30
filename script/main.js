@@ -92,6 +92,10 @@ corridor.makeButtons = function(column) {
 		columns.selectAll("option").filter(function(d) {
 			return (undefined!=d && d.type=="id");
 		}).attr("disabled","disabled"); // disable columns of type id
+		d3.selectAll(".column").filter(function(){
+			columns.select("option[value='"+d3.select(this).attr("column")+"']").attr("disabled","disabled");
+			return true;
+		});
 		// help text
 		controller.append("span").attr("class", "help").html("<br><br>Try clicking on the name of a column you have drawn "
 			+ "or moving the grey bars at the top and bottom of the chart via drag and drop.");
@@ -180,6 +184,13 @@ corridor.makeButtons = function(column) {
 					if (svg) corridor.changeScale(d3.select("svg[column='"+column+"']"), corridor.structure[column]);
 				});
 	}
+	controller.append("input").attr("type", "button").attr("name", "delete").attr("value", "delete this column")
+			.on("click", function() {if (svg) corridor.deleteColumn(column);});
+}
+
+corridor.deleteColumn = function(column) {
+	d3.select(".column[column='"+column+"']").remove();
+	corridor.makeButtons();
 }
 
 /*

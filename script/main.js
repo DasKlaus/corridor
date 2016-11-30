@@ -28,7 +28,7 @@ corridor = {
 	hoverCell: "#f30", // color of cells on mouseover
 	data: new Array(),
 	structure: new Array(),
-	displayed: new Array(14,30,42,61,62,63),
+	displayed: new Array(), //new Array(14,30,42,61,62,63),
 	limit: { // limits visualisation
 		data: null, // maximum datasets evaluated
 		each: 1000, // maximum points per column
